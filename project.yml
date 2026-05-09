@@ -98,6 +98,20 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         SKIP_INSTALL: YES
 
+  simcamctl:
+    type: tool
+    platform: macOS
+    sources:
+      - path: simcamctl
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dautov.simcamctl
+        PRODUCT_NAME: simcamctl
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: NO
+
 schemes:
   SimulatorCamera:
     build:
@@ -111,6 +125,14 @@ schemes:
     profile:
       config: Release
     analyze:
+      config: Debug
+    archive:
+      config: Release
+  simcamctl:
+    build:
+      targets:
+        simcamctl: all
+    run:
       config: Debug
     archive:
       config: Release
