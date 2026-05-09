@@ -48,6 +48,16 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
     private var _whiteStripeStartRow: UInt32 = 0
     private var _whiteStripeIsAscending: Bool = false
 
+    /// Active source kind. testPattern = local timer emission. Anything else
+    /// = container is pushing frames via XPC, the timer no-ops.
+    private var _activeSource: SimCamSourceKind = .testPattern
+    private let _sourceLock = NSLock()
+
+    var activeSource: SimCamSourceKind {
+        get { _sourceLock.lock(); defer { _sourceLock.unlock() }; return _activeSource }
+        set { _sourceLock.lock(); _activeSource = newValue; _sourceLock.unlock() }
+    }
+
     init(localizedName: String) {
         super.init()
 
@@ -125,7 +135,12 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
 
         _timer!.setEventHandler { [weak self] in
             guard let self else { return }
-            self.emitTestPatternFrame()
+            // Test pattern timer no-ops when an external source (Mac camera,
+            // video, image, QR) is pushing frames over XPC. The XPC-pushed
+            // frames take their own path through injectFrame.
+            if self.activeSource == .testPattern {
+                self.emitTestPatternFrame()
+            }
         }
         _timer!.setCancelHandler { }
         _timer!.resume()
@@ -210,6 +225,84 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
             )
         }
         os_log(.debug, "video frame ts=\(timingInfo.presentationTimeStamp.seconds) now=\(now.seconds) err=\(err)")
+    }
+
+    /// Inject a frame pushed from the container app over XPC. BGRA bytes →
+    /// CVPixelBuffer → CMSampleBuffer → CMIOExtensionStream.send.
+    /// Called from XPC reply handlers (off the timer queue).
+    func injectFrame(_ frame: SimCamFrame) {
+        // Only inject when streaming is actually active. Otherwise we waste work.
+        guard _streamingCounter > 0 else { return }
+        guard frame.pixelFormat == kCVPixelFormatType_32BGRA else {
+            os_log(.error, "injectFrame: unsupported pixel format \(frame.pixelFormat)")
+            return
+        }
+
+        var pixelBuffer: CVPixelBuffer?
+        let attrs: [CFString: Any] = [
+            kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary,
+        ]
+        let createStatus = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            frame.width,
+            frame.height,
+            frame.pixelFormat,
+            attrs as CFDictionary,
+            &pixelBuffer
+        )
+        guard createStatus == kCVReturnSuccess, let pb = pixelBuffer else {
+            os_log(.error, "injectFrame: CVPixelBufferCreate failed status=\(createStatus)")
+            return
+        }
+
+        CVPixelBufferLockBaseAddress(pb, [])
+        if let dest = CVPixelBufferGetBaseAddress(pb) {
+            let destRowBytes = CVPixelBufferGetBytesPerRow(pb)
+            frame.bgraData.withUnsafeBytes { srcRaw in
+                guard let src = srcRaw.baseAddress else { return }
+                if destRowBytes == frame.bytesPerRow {
+                    memcpy(dest, src, frame.bytesPerRow * frame.height)
+                } else {
+                    // Different alignment: copy row by row.
+                    let copyBytes = min(destRowBytes, frame.bytesPerRow)
+                    for row in 0..<frame.height {
+                        memcpy(
+                            dest.advanced(by: row * destRowBytes),
+                            src.advanced(by: row * frame.bytesPerRow),
+                            copyBytes
+                        )
+                    }
+                }
+            }
+        }
+        CVPixelBufferUnlockBaseAddress(pb, [])
+
+        // Build a CMSampleBuffer matching our advertised format.
+        var sampleBuffer: CMSampleBuffer!
+        var timing = CMSampleTimingInfo()
+        timing.presentationTimeStamp = CMTime(
+            seconds: frame.timestampSeconds,
+            preferredTimescale: 1_000_000_000
+        )
+        let cmStatus = CMSampleBufferCreateForImageBuffer(
+            allocator: kCFAllocatorDefault,
+            imageBuffer: pb,
+            dataReady: true,
+            makeDataReadyCallback: nil,
+            refcon: nil,
+            formatDescription: _videoDescription,
+            sampleTiming: &timing,
+            sampleBufferOut: &sampleBuffer
+        )
+        if cmStatus == 0, let sb = sampleBuffer {
+            _streamSource.stream.send(
+                sb,
+                discontinuity: [],
+                hostTimeInNanoseconds: UInt64(frame.timestampSeconds * Double(NSEC_PER_SEC))
+            )
+        } else {
+            os_log(.error, "injectFrame: CMSampleBufferCreate failed status=\(cmStatus)")
+        }
     }
 }
 
@@ -304,6 +397,22 @@ final class SimulatorCameraProviderSource: NSObject, CMIOExtensionProviderSource
             try provider.addDevice(deviceSource.device)
         } catch {
             fatalError("Failed to add device: \(error.localizedDescription)")
+        }
+
+        // Start the XPC listener so the container app can push frames + switch
+        // sources. The listener wires its frame-receive hook to the device
+        // source's injectFrame method, and its source-switch hook to the
+        // device source's activeSource property.
+        let dev = deviceSource!
+        Task { @MainActor in
+            let listener = XPCListener.shared
+            listener.onFrameReceived = { [weak dev] frame in
+                dev?.injectFrame(frame)
+            }
+            listener.onSourceSwitched = { [weak dev] kind in
+                dev?.activeSource = kind
+            }
+            listener.start()
         }
     }
 

@@ -2,23 +2,36 @@
 //  App.swift
 //  SimulatorCamera (container app)
 //
-//  SwiftUI entry point. Hosts the single-window UI that owns extension
-//  activation state. v1.0.0 Phase 1 ships test-pattern-only — no source
-//  picker, no Mac camera capture yet. The button activates the bundled
-//  Camera Extension; macOS shows System Settings approval the first time.
+//  SwiftUI entry point. Hosts ExtensionController (system extension state),
+//  XPCClient (connection to running extension), SourceManager (active
+//  frame source). Single window UI exposes the 5 sources matching SimCam
+//  feature parity: test pattern, Mac camera, video file, image, QR code.
 //
 
 import SwiftUI
 
 @main
 struct SimulatorCameraApp: App {
-    @State private var controller = ExtensionController()
+    @State private var extensionController = ExtensionController()
+    @State private var xpcClient = XPCClient()
+    @State private var sourceManager: SourceManager
+
+    init() {
+        let xpc = XPCClient()
+        _xpcClient = State(initialValue: xpc)
+        _sourceManager = State(initialValue: SourceManager(xpc: xpc))
+    }
 
     var body: some Scene {
         WindowGroup("SimulatorCamera") {
             MainView()
-                .environment(controller)
-                .frame(minWidth: 480, minHeight: 360)
+                .environment(extensionController)
+                .environment(xpcClient)
+                .environment(sourceManager)
+                .frame(minWidth: 540, minHeight: 520)
+                .onAppear {
+                    xpcClient.connect()
+                }
         }
         .windowResizability(.contentSize)
     }

@@ -8,11 +8,21 @@
 
 /* Begin PBXBuildFile section */
 		07A2A4651AA575FEBF94D191 /* SimulatorCameraProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06AC788CDB1F5546EF813A18 /* SimulatorCameraProvider.swift */; };
+		0B0F268D9B7EE26F8904395C /* SourceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5009C01A5443FF9242C25F78 /* SourceManager.swift */; };
+		15791A539F2708C098E31D62 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */; };
 		179FDC3A8B0E644F699454C4 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79EB81F6F0FA26FC8C0D512B /* main.swift */; };
 		386FA16D47CF0C291E857D00 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C0BF6EA2153FF6E4FBC5A8 /* MainView.swift */; };
+		3A6201D7FAE7F6CA4EF65AF8 /* XPCContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03F7F4D79D34E4247B516F4 /* XPCContract.swift */; };
+		407FDEB20AF617B242C43F43 /* QRSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5543F1512AE6614C0DE4861D /* QRSource.swift */; };
+		421EF26B04C7EAFAD829D128 /* XPCContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03F7F4D79D34E4247B516F4 /* XPCContract.swift */; };
+		501C657F795A0DC953369029 /* FrameSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C92C6072F6DEFA308054810 /* FrameSource.swift */; };
 		79393074F69A438E4A0665DC /* SimulatorCameraExtension.systemextension in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = F98E17DBE81C3CB7BB6DD64F /* SimulatorCameraExtension.systemextension */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		8546D23BC4452E57BA9696BF /* XPCListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15462DB146A441EE40220F7E /* XPCListener.swift */; };
 		A03B198646B946D161279AE4 /* ExtensionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F7FE73205CB332230563010 /* ExtensionController.swift */; };
+		A17BFCC55A289A0EDBB17EFC /* XPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D72AB264FCDBF6354E0DEFF /* XPCClient.swift */; };
 		C45434EC9AC1413E7A3F2336 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCE77BA32C83D30E6F389FEC /* App.swift */; };
+		D3B54EFD8EC9634626E4351F /* MacCameraSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */; };
+		F6D3FCD3CDF09C4E6AB84FB0 /* VideoFileSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CD7BA6EB552D5C96D7431 /* VideoFileSource.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,10 +51,19 @@
 
 /* Begin PBXFileReference section */
 		06AC788CDB1F5546EF813A18 /* SimulatorCameraProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorCameraProvider.swift; sourceTree = "<group>"; };
+		0C92C6072F6DEFA308054810 /* FrameSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameSource.swift; sourceTree = "<group>"; };
+		15462DB146A441EE40220F7E /* XPCListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCListener.swift; sourceTree = "<group>"; };
+		197CD7BA6EB552D5C96D7431 /* VideoFileSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoFileSource.swift; sourceTree = "<group>"; };
+		3D72AB264FCDBF6354E0DEFF /* XPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCClient.swift; sourceTree = "<group>"; };
+		4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacCameraSource.swift; sourceTree = "<group>"; };
+		5009C01A5443FF9242C25F78 /* SourceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceManager.swift; sourceTree = "<group>"; };
+		5543F1512AE6614C0DE4861D /* QRSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRSource.swift; sourceTree = "<group>"; };
 		79EB81F6F0FA26FC8C0D512B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		9F7FE73205CB332230563010 /* ExtensionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionController.swift; sourceTree = "<group>"; };
+		D03F7F4D79D34E4247B516F4 /* XPCContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCContract.swift; sourceTree = "<group>"; };
 		DB54B2F9E37B302B163A2E80 /* SimulatorCamera.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimulatorCamera.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCE77BA32C83D30E6F389FEC /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
 		F98E17DBE81C3CB7BB6DD64F /* SimulatorCameraExtension.systemextension */ = {isa = PBXFileReference; explicitFileType = "wrapper.system-extension"; includeInIndex = 0; path = SimulatorCameraExtension.systemextension; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9C0BF6EA2153FF6E4FBC5A8 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -55,13 +74,23 @@
 			children = (
 				79EB81F6F0FA26FC8C0D512B /* main.swift */,
 				06AC788CDB1F5546EF813A18 /* SimulatorCameraProvider.swift */,
+				15462DB146A441EE40220F7E /* XPCListener.swift */,
 			);
 			path = SimulatorCameraExtension;
+			sourceTree = "<group>";
+		};
+		47C00AF28DD07896D781CE34 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				D03F7F4D79D34E4247B516F4 /* XPCContract.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		63CDB52FF0C3B205A4C643EF = {
 			isa = PBXGroup;
 			children = (
+				47C00AF28DD07896D781CE34 /* Shared */,
 				E1F89F8248179DAE48944641 /* SimulatorCamera */,
 				28B2B547EAE32A48697EE743 /* SimulatorCameraExtension */,
 				BA66F457FD4957682D57E9FE /* Products */,
@@ -82,7 +111,14 @@
 			children = (
 				DCE77BA32C83D30E6F389FEC /* App.swift */,
 				9F7FE73205CB332230563010 /* ExtensionController.swift */,
+				0C92C6072F6DEFA308054810 /* FrameSource.swift */,
+				EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */,
+				4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */,
 				F9C0BF6EA2153FF6E4FBC5A8 /* MainView.swift */,
+				5543F1512AE6614C0DE4861D /* QRSource.swift */,
+				5009C01A5443FF9242C25F78 /* SourceManager.swift */,
+				197CD7BA6EB552D5C96D7431 /* VideoFileSource.swift */,
+				3D72AB264FCDBF6354E0DEFF /* XPCClient.swift */,
 			);
 			path = SimulatorCamera;
 			sourceTree = "<group>";
@@ -170,7 +206,15 @@
 			files = (
 				C45434EC9AC1413E7A3F2336 /* App.swift in Sources */,
 				A03B198646B946D161279AE4 /* ExtensionController.swift in Sources */,
+				501C657F795A0DC953369029 /* FrameSource.swift in Sources */,
+				15791A539F2708C098E31D62 /* ImageSource.swift in Sources */,
+				D3B54EFD8EC9634626E4351F /* MacCameraSource.swift in Sources */,
 				386FA16D47CF0C291E857D00 /* MainView.swift in Sources */,
+				407FDEB20AF617B242C43F43 /* QRSource.swift in Sources */,
+				0B0F268D9B7EE26F8904395C /* SourceManager.swift in Sources */,
+				F6D3FCD3CDF09C4E6AB84FB0 /* VideoFileSource.swift in Sources */,
+				A17BFCC55A289A0EDBB17EFC /* XPCClient.swift in Sources */,
+				421EF26B04C7EAFAD829D128 /* XPCContract.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,6 +223,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				07A2A4651AA575FEBF94D191 /* SimulatorCameraProvider.swift in Sources */,
+				3A6201D7FAE7F6CA4EF65AF8 /* XPCContract.swift in Sources */,
+				8546D23BC4452E57BA9696BF /* XPCListener.swift in Sources */,
 				179FDC3A8B0E644F699454C4 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -2,31 +2,39 @@
 //  MainView.swift
 //  SimulatorCamera
 //
-//  v1.0.0 Phase 1 UI. One window. One job: prove the bundled Camera
-//  Extension activates, registers a virtual camera, and shows up in
-//  AVFoundation. Source picker arrives in Phase 2.
+//  v1.0 UI matching SimCam feature surface: extension activation status,
+//  source picker (test pattern, Mac camera, video file, image, QR code),
+//  Run Diagnostics, frame counter.
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct MainView: View {
-    @Environment(ExtensionController.self) private var controller
+    @Environment(ExtensionController.self) private var extensionController
+    @Environment(XPCClient.self) private var xpc
+    @Environment(SourceManager.self) private var sourceManager
 
     var body: some View {
-        VStack(spacing: 24) {
-            header
-            statusCard
-            actionButton
-            footer
+        ScrollView {
+            VStack(spacing: 20) {
+                header
+                extensionStatusCard
+                sourcePicker
+                diagnosticsCard
+                footer
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .top)
         }
-        .padding(28)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
+
+    // MARK: - Header
 
     private var header: some View {
         VStack(spacing: 6) {
             Image(systemName: "video.circle.fill")
-                .font(.system(size: 48))
+                .font(.system(size: 44))
                 .foregroundStyle(.tint)
             Text("SimulatorCamera")
                 .font(.title.bold())
@@ -37,64 +45,216 @@ struct MainView: View {
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
-    private var statusCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    // MARK: - Extension status
+
+    private var extensionStatusCard: some View {
+        @Bindable var ec = extensionController
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 10, height: 10)
-                Text(statusLabel)
-                    .font(.headline)
+                Circle().fill(extensionStatusColor).frame(width: 10, height: 10)
+                Text(extensionStatusLabel).font(.headline)
+                Spacer()
+                Button(extensionActionLabel, action: handleExtensionAction)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .disabled(extensionActionDisabled)
             }
-            if !controller.lastMessage.isEmpty {
-                Text(controller.lastMessage)
+            if !ec.lastMessage.isEmpty {
+                Text(ec.lastMessage)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 
-    private var actionButton: some View {
-        Button(action: handleAction) {
-            HStack {
-                Image(systemName: actionIcon)
-                Text(actionLabel)
-                    .fontWeight(.semibold)
+    // MARK: - Source picker
+
+    private var sourcePicker: some View {
+        @Bindable var sm = sourceManager
+        return VStack(alignment: .leading, spacing: 14) {
+            Text("Source").font(.headline)
+
+            sourceRow(.testPattern, icon: "tv", title: "Test Pattern", subtitle: "Built into the extension. No setup.")
+            sourceRow(.macCamera, icon: "camera.fill", title: "Mac Camera", subtitle: "Live webcam. First use prompts for camera access.")
+
+            Divider()
+
+            videoFileRow
+            imageFileRow
+            qrRow
+
+            if let err = sourceManager.lastError {
+                Text(err)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.top, 4)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
+
+            HStack {
+                Text("Frames pushed: \(sourceManager.framesPushed)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if sourceManager.activeKind != .testPattern {
+                    Button("Stop") { sourceManager.stop() }
+                        .controlSize(.small)
+                }
+            }
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .disabled(actionDisabled)
+        .padding(14)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 
+    private func sourceRow(
+        _ kind: SimCamSourceKind,
+        icon: String,
+        title: String,
+        subtitle: String
+    ) -> some View {
+        let isActive = sourceManager.activeKind == kind
+        return Button {
+            Task { try? await sourceManager.switchTo(kind) }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(isActive ? Color.accentColor : .secondary)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.callout.weight(isActive ? .semibold : .regular))
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if isActive {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var videoFileRow: some View {
+        @Bindable var sm = sourceManager
+        return HStack(spacing: 10) {
+            Image(systemName: "film.fill")
+                .font(.title3)
+                .foregroundStyle(sourceManager.activeKind == .videoFile ? Color.accentColor : .secondary)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Video File").font(.callout)
+                Text(sourceManager.selectedFileURL?.lastPathComponent ?? "Pick an MP4 / MOV file…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer()
+            Button("Browse…") { pickVideoFile() }.controlSize(.small)
+            Button("Use") {
+                Task { try? await sourceManager.switchTo(.videoFile) }
+            }
+            .controlSize(.small)
+            .disabled(sourceManager.selectedFileURL == nil)
+        }
+    }
+
+    private var imageFileRow: some View {
+        return HStack(spacing: 10) {
+            Image(systemName: "photo.fill")
+                .font(.title3)
+                .foregroundStyle(sourceManager.activeKind == .image ? Color.accentColor : .secondary)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Static Image").font(.callout)
+                Text(sourceManager.selectedImageURL?.lastPathComponent ?? "Pick a PNG / JPG file…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer()
+            Button("Browse…") { pickImageFile() }.controlSize(.small)
+            Button("Use") {
+                Task { try? await sourceManager.switchTo(.image) }
+            }
+            .controlSize(.small)
+            .disabled(sourceManager.selectedImageURL == nil)
+        }
+    }
+
+    private var qrRow: some View {
+        @Bindable var sm = sourceManager
+        return HStack(spacing: 10) {
+            Image(systemName: "qrcode")
+                .font(.title3)
+                .foregroundStyle(sourceManager.activeKind == .qrCode ? Color.accentColor : .secondary)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("QR Code").font(.callout)
+                TextField("Payload (URL or string)", text: $sm.qrPayload)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.caption)
+            }
+            Button("Generate") {
+                Task { try? await sourceManager.switchTo(.qrCode) }
+            }
+            .controlSize(.small)
+            .disabled(sourceManager.qrPayload.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+    }
+
+    // MARK: - Diagnostics
+
+    private var diagnosticsCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Diagnostics").font(.headline)
+                Spacer()
+                Button("Run Diagnostics") {
+                    runDiagnostics()
+                }
+                .controlSize(.small)
+            }
+            HStack(spacing: 16) {
+                diagnosticItem("XPC", state: xpcStateDescription, ok: xpcConnected)
+                diagnosticItem("Extension", state: extensionStatusLabel, ok: extensionController.state == .active)
+            }
+        }
+        .padding(14)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func diagnosticItem(_ name: String, state: String, ok: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(name).font(.caption.bold())
+            HStack(spacing: 4) {
+                Circle().fill(ok ? Color.green : Color.gray).frame(width: 6, height: 6)
+                Text(state).font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Footer
+
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Once the extension is active:")
-                .font(.subheadline.bold())
-            Text("1. Open the iOS Simulator and launch a camera-using app.")
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Once active, the iOS Simulator sees 'SimulatorCamera Virtual'")
+                .font(.caption.bold())
+            Text("AVCaptureDevice.default(for: .video) returns it. Existing camera code Just Works.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("2. AVCaptureDevice.default(for: .video) returns 'SimulatorCamera Virtual'.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text("3. v1.0.0 ships a scrolling-stripe test pattern. Mac camera source lands in v1.1.")
-                .font(.caption)
-                .foregroundStyle(.secondary.opacity(0.7))
-                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Derived UI state
+    // MARK: - Derived state
 
-    private var statusColor: Color {
-        switch controller.state {
+    private var extensionStatusColor: Color {
+        switch extensionController.state {
         case .unknown, .checking, .inactive: return .gray
         case .activating, .awaitingApproval, .deactivating: return .orange
         case .active: return .green
@@ -102,51 +262,77 @@ struct MainView: View {
         }
     }
 
-    private var statusLabel: String {
-        switch controller.state {
+    private var extensionStatusLabel: String {
+        switch extensionController.state {
         case .unknown: return "Not checked"
-        case .checking: return "Checking..."
+        case .checking: return "Checking…"
         case .inactive: return "Inactive"
-        case .activating: return "Activating..."
-        case .awaitingApproval: return "Waiting for your approval in System Settings"
-        case .active: return "Active — virtual camera available"
-        case .deactivating: return "Deactivating..."
+        case .activating: return "Activating…"
+        case .awaitingApproval: return "Awaiting approval"
+        case .active: return "Active"
+        case .deactivating: return "Deactivating…"
         case .error(let msg): return "Error: \(msg)"
         }
     }
 
-    private var actionLabel: String {
-        switch controller.state {
-        case .active: return "Deactivate Extension"
-        case .activating, .deactivating: return "Working..."
-        default: return "Activate Extension"
+    private var extensionActionLabel: String {
+        switch extensionController.state {
+        case .active: return "Deactivate"
+        case .activating, .deactivating: return "Working…"
+        default: return "Activate"
         }
     }
 
-    private var actionIcon: String {
-        switch controller.state {
-        case .active: return "stop.circle.fill"
-        default: return "play.circle.fill"
-        }
-    }
-
-    private var actionDisabled: Bool {
-        switch controller.state {
+    private var extensionActionDisabled: Bool {
+        switch extensionController.state {
         case .activating, .deactivating, .checking: return true
         default: return false
         }
     }
 
-    private func handleAction() {
-        switch controller.state {
-        case .active: controller.deactivate()
-        default: controller.activate()
+    private var xpcConnected: Bool {
+        if case .connected = xpc.connectionState { return true }
+        return false
+    }
+
+    private var xpcStateDescription: String {
+        switch xpc.connectionState {
+        case .disconnected: return "Disconnected"
+        case .connecting: return "Connecting…"
+        case .connected: return "Connected (pid \(xpc.lastPingPid))"
+        case .failed(let m): return "Failed: \(m)"
         }
     }
-}
 
-#Preview {
-    MainView()
-        .environment(ExtensionController())
-        .frame(width: 480, height: 420)
+    // MARK: - Actions
+
+    private func handleExtensionAction() {
+        switch extensionController.state {
+        case .active: extensionController.deactivate()
+        default: extensionController.activate()
+        }
+    }
+
+    private func pickVideoFile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.movie, .mpeg4Movie, .quickTimeMovie]
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            sourceManager.selectedFileURL = url
+        }
+    }
+
+    private func pickImageFile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image, .png, .jpeg]
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            sourceManager.selectedImageURL = url
+        }
+    }
+
+    private func runDiagnostics() {
+        xpc.connect()
+        xpc.ping()
+    }
 }
