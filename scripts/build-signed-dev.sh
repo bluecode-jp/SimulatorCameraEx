@@ -64,7 +64,19 @@ codesign --display --entitlements - "$APP" 2>&1 | grep -A1 system-extension || \
     { echo "ERROR: system-extension.install entitlement missing!" >&2; exit 1; }
 
 echo ""
-echo "✅ Built signed: $APP"
+echo "▶︎ Install to /Applications (required for system-extension activation)"
+# OSSystemExtensionRequest refuses to activate when the host app lives anywhere
+# but /Applications. Auto-copy here so the dev loop is "build script → click
+# Activate" with no manual drag.
+pkill -f "/Applications/SimulatorCamera.app/Contents/MacOS/SimulatorCamera" 2>/dev/null || true
+sleep 0.5
+rm -rf /Applications/SimulatorCamera.app
+cp -R "$APP" /Applications/SimulatorCamera.app
+codesign --verify --verbose=2 /Applications/SimulatorCamera.app 2>&1 | tail -1
+INSTALLED="/Applications/SimulatorCamera.app"
+
 echo ""
-echo "Next: open '$APP' and click Activate."
+echo "✅ Installed: $INSTALLED"
+echo ""
+echo "Next: open $INSTALLED and click Activate."
 echo "On first run, macOS will prompt you to Allow in System Settings → Privacy & Security."
