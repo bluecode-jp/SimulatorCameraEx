@@ -7,6 +7,87 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-04-26
+
+**Architectural rewrite.** v1.0.0 abandons the v0.x TCP/SDK approach in
+favor of Apple's `CMIOExtension` system extension. The iOS Simulator
+(Xcode 16+) sees a real virtual camera through standard `AVFoundation`.
+**No SDK to import. No `Info.plist` key required in your app. No
+`#if targetEnvironment(simulator)` branches.**
+
+### Added
+- **macOS Camera Extension** (`SimulatorCameraExtension.systemextension`)
+  bundled inside the container app, registers as "SimulatorCamera Virtual"
+  in `AVCaptureDevice.devices(for: .video)`.
+- **Container app** (`SimulatorCamera.app`) submits
+  `OSSystemExtensionRequest` activation, hosts SwiftUI source picker,
+  pumps frames into the extension over XPC.
+- **Five frame sources:**
+  - Test pattern (built into extension; works with no setup)
+  - Mac webcam (`AVCaptureSession` on host)
+  - Video file (`AVAssetReader`, MP4/MOV/HEVC, loops at EOF)
+  - Static image (PNG/JPG, letterboxed to 1280x720)
+  - QR code generator (any UTF-8 string)
+- **`simcamctl` CLI** — `simcamctl set-source --qr "..."`,
+  `--image PATH`, `--pattern`, `status`, `ping`. Useful for AI agents
+  + CI that need deterministic frame fixtures.
+- **`patches/` directory** — `patch-package`-compatible patches for
+  `expo-camera < 55.0.11`, `react-native-vision-camera < 5.0`,
+  `react-native-webrtc`, `@fishjam-cloud/react-native-webrtc`. These
+  libraries hard-code `#if targetEnvironment(simulator)` to disable the
+  camera; we patch around the guard.
+- **XcodeGen project** (`project.yml`) — Xcode project regenerable from
+  YAML, suitable for `git diff`-friendly review.
+- **Run Diagnostics UI** in container app — XPC connection state,
+  extension activation state, frame counter.
+
+### Changed
+- **Tagline:** "Stream a real camera into the iOS Simulator" → "Your
+  Mac's camera, in the iOS Simulator. Free and open." Positions
+  SimulatorCamera as Act 1 of the Simulator's missing sensor layer
+  (microphone, BLE, motion, LiDAR coming in v2+).
+- **Min macOS:** 13.0 (Ventura) → 14.0 (Sonoma) for `@Observable` +
+  `@Environment(.self)` SwiftUI APIs.
+- **Distribution:** arm64-only. Intel Macs not supported in v1.x.
+- **Bundle ID:** `com.simulatorcamera.server` →
+  `com.dautov.SimulatorCamera` (container) +
+  `com.dautov.SimulatorCamera.Extension` (system extension).
+
+### Removed
+- **Entire iOS SDK** (`SimulatorCameraClient` Swift Package). The new
+  architecture requires zero iOS SDK; user apps go through
+  `AVFoundation` unchanged.
+- **TCP server** (`SimulatorCameraServer` CLI). Replaced by the system
+  extension's XPC interface.
+- **SCMF wire protocol.** Frames now flow through Apple's
+  `CMIOExtensionStream` infrastructure.
+- **`SimulatorCameraSession`, `SimulatorCameraPreviewView`, `SimulatorCameraView`,
+  `SimulatorCaptureSession`, `SimulatorCameraOutput`** — all v0.x SDK types
+  gone. User code that imported `SimulatorCameraClient` must drop the
+  import; the camera "just works" through standard AVFoundation.
+- **iOS demo app** (`apps/iOSDemo/`). With no SDK, no demo is needed —
+  any iOS Simulator app that uses `AVCaptureDevice` IS the demo.
+- **`NSLocalNetworkUsageDescription` requirement.** No more local
+  network — XPC is in-process to the system extension.
+- **SwiftPM `Package.swift`.** System extensions cannot be built by
+  SwiftPM; the project is now Xcode-managed (XcodeGen → .xcodeproj).
+
+### Migration from v0.2.x
+
+If you were on v0.2.x, the upgrade is structural:
+
+1. `brew upgrade --cask simulatorcamera` (cask now points at the new app)
+2. Open SimulatorCamera, click Activate, click Allow in System Settings
+3. **Remove `SimulatorCameraClient` from your iOS app's Package.swift**
+4. **Remove all `import SimulatorCameraClient` lines from your code**
+5. **Remove the `NSLocalNetworkUsageDescription` Info.plist key** (was
+   the v0.2 silent-failure gotcha; no longer needed)
+6. **Remove the `SimulatorCameraSession` / `SimulatorCameraView` /
+   `SimulatorCaptureSession` usage** — your existing
+   `AVCaptureSession`-based code is now the path.
+
+Net effect: the migration deletes code from your app rather than adding it.
+
 ## [0.2.0] — 2026-04-15
 
 ### Added

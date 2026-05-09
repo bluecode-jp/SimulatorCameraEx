@@ -1,11 +1,11 @@
 cask "simulatorcamera" do
-  version "0.2.0"
+  version "1.0.0"
   sha256 "REPLACE_WITH_ACTUAL_DMG_SHA256_ON_RELEASE"
 
   url "https://github.com/dautovri/SimulatorCamera/releases/download/v#{version}/SimulatorCamera-#{version}.dmg",
       verified: "github.com/dautovri/SimulatorCamera/"
   name "SimulatorCamera"
-  desc "Stream a real Mac camera, video file, or screen region into the iOS Simulator"
+  desc "Open-source virtual camera for the iOS Simulator (Camera Extension)"
   homepage "https://github.com/dautovri/SimulatorCamera"
 
   livecheck do
@@ -13,12 +13,21 @@ cask "simulatorcamera" do
     strategy :github_latest
   end
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: ">= :sonoma"
+  depends_on arch: :arm64
 
-  app "SimulatorCameraServer.app"
+  app "SimulatorCamera.app"
+
+  binary "#{appdir}/SimulatorCamera.app/Contents/MacOS/simcamctl"
+
+  uninstall delete: [
+    "/Applications/SimulatorCamera.app",
+  ]
 
   zap trash: [
-    "~/Library/Preferences/com.simulatorcamera.server.plist",
-    "~/Library/Application Support/SimulatorCameraServer",
+    "~/Library/Preferences/com.dautov.SimulatorCamera.plist",
+    "~/Library/Application Support/SimulatorCamera",
+    "~/Library/Containers/com.dautov.SimulatorCamera",
+    "~/Library/Containers/com.dautov.SimulatorCamera.Extension",
   ]
 end

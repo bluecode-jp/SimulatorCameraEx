@@ -1,233 +1,178 @@
 # SimulatorCamera
 
-> Plug a real camera, a video file, or your screen into the iOS Simulator. Finally.
+> Your Mac's camera, in the iOS Simulator. Free and open.
 
-[![Swift 5.9+](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org)
-[![Platforms](https://img.shields.io/badge/platforms-iOS%2016%20%7C%20macOS%2013-blue.svg)](#installation)
-[![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)](#installation)
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue.svg)](#install)
+[![Xcode 16+](https://img.shields.io/badge/Xcode-16%2B-blue.svg)](#install)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/dautovri/SimulatorCamera?include_prereleases&label=release)](../../releases)
-[![CI](https://github.com/dautovri/SimulatorCamera/actions/workflows/ci.yml/badge.svg)](../../actions)
 [![Sponsor](https://img.shields.io/github/sponsors/dautovri?label=Sponsor&logo=github-sponsors)](https://github.com/sponsors/dautovri)
 
-The iOS Simulator has never supported a real camera. `AVCaptureDevice` is empty. Every app that touches the camera — QR scanners, barcode readers, document capture, ML pipelines, AR prototypes — either stubs out the camera path, runs only on device, or ships a brittle "use a photo instead" fallback.
+The iOS Simulator has never had a real camera. `AVCaptureDevice` returns
+nil. Every app that touches the camera — QR scanners, barcode readers,
+document capture, ML pipelines, AR prototypes, video calling — either
+stubs the camera path, runs only on physical devices, or ships a brittle
+"use a photo instead" fallback.
 
-**SimulatorCamera** is a tiny two-piece developer tool that fixes it:
+**SimulatorCamera registers a virtual camera at the macOS system level**
+using Apple's `CMIOExtension` API. The iOS Simulator (Xcode 16+) sees the
+virtual camera through standard `AVFoundation`. **Your existing
+`AVCaptureSession` code Just Works.** Zero SDK integration. Zero
+`Info.plist` changes. Zero `#if targetEnvironment(simulator)` branches.
 
-- a **macOS companion app** that streams video frames over `localhost:9876` using a compact binary protocol (SCMF — Simulator Camera Message Format), and
-- an **iOS Swift Package** with an `AVCaptureSession`-shaped API. On device it compiles to a no-op.
+## What you get
 
-Frames show up in your app. Vision, VisionKit, Core ML, barcode detection, custom pipelines — the SDK is designed to drive them in the Simulator at 25–30 FPS over localhost, no device, no cables, no private APIs.
+- 🎥 **Mac webcam → iOS Simulator** — your existing app sees frames at 30 FPS, 1280×720
+- 🎬 **Video file source** — drop in any MP4 / MOV / HEVC, loops cleanly
+- 🖼 **Static image source** — pick a PNG / JPG, becomes the camera feed
+- 🔲 **QR code generator** — programmatic QR for scanner testing
+- 🌈 **Test pattern** — built-in colorbar / scrolling stripe, always available
+- 🤖 **`simcamctl` CLI** — `simcamctl set-source --qr "TOKEN"` for CI / AI agents
+- 🛡 **Zero SDK** — your iOS app code does not import or link anything from this project
+- 📵 **Zero device required** — runs entirely in the iOS Simulator
+- 🆓 **Free, MIT-licensed, open source** — fork it, ship it, sell it, no fees
 
-> **Status:** v0.2.0 is a preview cut. A recorded demo and independent benchmarks will land with the first tagged release; for now, the protocol and shim are best-effort and we're actively looking for early testers.
+## Demo
 
----
+[hero GIF lands here in v1.0.0 release]
 
-## Why
+## 60-second install
 
-Every camera-using app today has one of these:
-
-```swift
-#if targetEnvironment(simulator)
-// TODO: fake it somehow
-#else
-let session = AVCaptureSession()
-// ...real code
-#endif
-```
-
-This project deletes that `TODO`. Same API shape in the Simulator and on device.
-
-## Features
-
-- 🎥 Live video into the Simulator at 30 FPS via `localhost` TCP
-- 🧩 Drop-in SDK — `FrameSource` mirrors `AVCaptureSession` semantics (`start()`, `stop()`, delegate, `CVPixelBuffer` callbacks)
-- 🔌 Sources on the Mac: test pattern (built-in), webcam, video file, screen region *(roadmap)*
-- 📦 One-line install via Swift Package Manager
-- 🛡 No private APIs — `Network.framework` + `CoreVideo` + `ImageIO`
-- 📵 Zero overhead on device — `#if targetEnvironment(simulator)`-guarded
-- 🔐 Localhost-only by default
-- 🧪 Vision / Core ML ready — frames land as `CVPixelBuffer`
-
-## Installation
-
-### iOS SDK — Swift Package Manager
-
-```swift
-dependencies: [
-    .package(url: "https://github.com/dautovri/SimulatorCamera.git", from: "0.2.0"),
-],
-targets: [
-    .target(
-        name: "MyApp",
-        dependencies: [
-            .product(name: "SimulatorCameraClient", package: "SimulatorCamera"),
-        ]
-    ),
-]
-```
-
-Or in Xcode: **File → Add Package Dependencies…** → paste the repo URL.
-
-### macOS companion app
-
-**Homebrew (recommended):**
+**1. Install the Mac companion app:**
 
 ```bash
 brew install --cask dautovri/tap/simulatorcamera
-open -a SimulatorCameraServer
+open -a SimulatorCamera
 ```
 
-Or grab the signed & notarized `.dmg` from [Releases](../../releases). Or build from source:
+**2. Click Activate, then click Allow when System Settings prompts.**
 
-```bash
-git clone https://github.com/dautovri/SimulatorCamera.git
-cd SimulatorCamera/apps/MacServer
-open SimulatorCameraServer.xcodeproj
-```
+That's it. No Xcode integration, no `Info.plist` changes, no `#if`
+guards anywhere in your code.
 
-## Usage
-
-1. Launch **SimCameraServer.app** on your Mac. Pick a source and click Start.
-2. In your iOS code:
+**3. Run any iOS Simulator app that uses the camera.** Open it in Xcode
+16+, run on a Simulator, and `AVCaptureDevice.default(for: .video)`
+returns "SimulatorCamera Virtual."
 
 ```swift
-import SimulatorCameraClient
-
-final class CameraController: NSObject, FrameSourceDelegate {
-    private let source: FrameSource
-
-    override init() {
-        #if targetEnvironment(simulator)
-        source = SimulatorCameraSession(host: "127.0.0.1", port: 9876)
-        #else
-        source = AVCaptureFrameSource() // your existing AVCapture wrapper
-        #endif
-        super.init()
-        source.delegate = self
-        source.start()
-    }
-
-    func frameSource(_ source: FrameSource, didOutput pixelBuffer: CVPixelBuffer, at time: CMTime) {
-        // Feed to Vision, Core ML, preview layer, whatever.
-    }
-}
-```
-
-### Full AVCaptureSession drop-in
-
-The shim now mirrors the whole `AVCaptureSession → addInput → addOutput → startRunning` dance. Your existing camera-setup code ports over by prefixing each type with `Simulator`:
-
-```swift
-import SimulatorCameraClient
-
-SimulatorCamera.configure(host: "127.0.0.1", port: 9876)
-
-let session = SimulatorCaptureSession()
-session.sessionPreset = .hd1280x720
-
-guard let device = SimulatorCaptureDevice.default(for: .video) else { return }
-let input = try SimulatorCaptureDeviceInput(device: device)
+// This — yes, exactly this — works in the iOS Simulator now:
+let session = AVCaptureSession()
+let device = AVCaptureDevice.default(for: .video)!
+let input = try AVCaptureDeviceInput(device: device)
 session.addInput(input)
-
-let output = SimulatorCameraOutput()          // AVCaptureVideoDataOutput-shaped
-output.setSampleBufferDelegate(self, queue: frameQueue)
-session.addOutput(output)
-
-session.startRunning()                         // kicks off the network session
+session.startRunning()
+// frames flow through your existing AVCaptureVideoDataOutput delegates
 ```
 
-Your existing `captureOutput(_:didOutput:from:)` delegate fires with a valid `CMSampleBuffer` wrapping a `CVPixelBuffer` — same code path as the real device.
+## Picking a source
 
-### Zero-change AVFoundation path (recommended)
+Open the SimulatorCamera Mac app:
 
-If you already have an `AVCaptureVideoDataOutputSampleBufferDelegate`,
-swap the output for `SimulatorCameraOutput` inside a simulator guard
-and keep your delegate code unchanged. The standard
-`captureOutput(_:didOutput:from:)` method fires with a real
-`CMSampleBuffer` — `SimulatorCameraOutput` is an `AVCaptureVideoDataOutput`
-subclass, so the first argument is a genuine AV output, not a stand-in:
+| Source             | Use case                                                   |
+| ------------------ | ---------------------------------------------------------- |
+| **Test Pattern**   | Default. Confirms wiring works. No permissions, no setup.  |
+| **Mac Camera**     | Live webcam (built-in or external). First use prompts for camera access. |
+| **Video File**     | Pre-recorded scenarios. Loops at EOF. Honors orientation metadata. |
+| **Static Image**   | Pin a frame for visual UI tests. Same image, fresh timestamps. |
+| **QR Code**        | Programmatic QR for scanner / payment-flow tests.          |
 
-```swift
-#if targetEnvironment(simulator)
-let output = SimulatorCameraOutput()
-output.setSampleBufferDelegate(self, queue: myQueue)
-SimulatorCamera.start()
-#else
-let output = AVCaptureVideoDataOutput()
-output.setSampleBufferDelegate(self, queue: myQueue)
-session.addOutput(output)
-#endif
-```
+## Driving from the command line
 
-Or use the drop-in SwiftUI view:
-
-```swift
-import SwiftUI
-import SimulatorCameraClient
-
-struct ContentView: View {
-    var body: some View {
-        SimulatorCameraPreviewView()
-    }
-}
-```
-
-## Protocol (SCMF)
-
-```
-+--------+---------------+------------------+--------+---------+----------+
-| magic  | payloadLength | timestamp        | width  | height  | jpegData |
-| 4 B    | 4 B uint32 LE | 8 B Float64 LE   | 4 B LE | 4 B LE  | N bytes  |
-| "SCMF" |                                                                |
-+--------+---------------+------------------+--------+---------+----------+
-```
-
-Full spec: [docs/PROTOCOL.md](docs/PROTOCOL.md) · architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · roadmap: [docs/ROADMAP.md](docs/ROADMAP.md).
-
-## Repo layout
-
-```
-SimulatorCamera/
-├── Package.swift                        # SwiftPM manifest (exposes SimulatorCameraClient)
-├── Sources/SimulatorCameraClient/       # the iOS SDK
-├── Tests/SimulatorCameraClientTests/    # unit tests for the SCMF codec
-├── apps/
-│   ├── MacServer/                       # SwiftUI macOS companion app
-│   └── iOSDemo/                         # sample iOS app using the SDK
-├── docs/
-│   ├── PROTOCOL.md                      # wire format
-│   ├── ARCHITECTURE.md                  # threading, transport, failure modes
-│   └── ROADMAP.md
-├── Casks/simulatorcamera.rb             # Homebrew cask formula
-├── scripts/
-│   ├── bootstrap.sh                     # swift build + test
-│   └── build-release.sh                 # archive + codesign + notarize + .dmg/.zip
-├── .github/
-│   ├── FUNDING.yml                      # GitHub Sponsors / BMC
-│   └── workflows/
-│       ├── ci.yml                       # SwiftPM CI on macos-14
-│       └── release.yml                  # tag-driven signed release
-└── RELEASING.md                         # release runbook
-```
-
-## Development
+`simcamctl` is bundled with the app and can be symlinked into `$PATH`:
 
 ```bash
-./scripts/bootstrap.sh   # swift build && swift test
+ln -s /Applications/SimulatorCamera.app/Contents/MacOS/simcamctl /usr/local/bin/simcamctl
+
+simcamctl ping
+# extension pid=12345 bundle=com.dautov.SimulatorCamera.Extension
+
+simcamctl set-source --qr "https://example.com/auth?token=ABC123"
+# QR pushed (40 chars, 3686 KB)
+
+simcamctl set-source --image ./test-fixtures/receipt.png
+# image pushed: receipt.png (1280x720)
+
+simcamctl status
+# active source:    QR code
+# connected clients:1
+# last frame ts:    1714159823.412s
+# stream running:   yes
 ```
 
-## Status
+Useful for:
 
-**v0.2.0 — "Use my real camera."** First stable release with a drop-in `AVCaptureSession` shim and live Mac webcam source. See [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE_NOTES_v0.2.0.md](docs/RELEASE_NOTES_v0.2.0.md).
+- CI scripts that run `xcodebuild test` against scanner / vision flows
+- AI agents that need to feed deterministic test fixtures into UI tests
+- Manual QA scripts that walk through `simcamctl set-source --image fixture-N.png`
+
+## React Native / Expo / WebRTC apps
+
+Some popular libraries hard-code `#if targetEnvironment(simulator)` to
+disable camera entirely. With SimulatorCamera the simulator does have a
+camera, so those guards prevent the virtual feed from reaching your app.
+
+We ship `patch-package`-compatible patches for known libraries:
+
+| Library                              | Versions that may need patching | Patch                                              |
+| ------------------------------------ | ------------------------------- | -------------------------------------------------- |
+| `expo-camera`                        | `<55.0.11`                      | [patches/expo-camera/](./patches/expo-camera/)     |
+| `react-native-vision-camera`         | `<5.0`                          | [patches/react-native-vision-camera/](./patches/react-native-vision-camera/) |
+| `react-native-webrtc`                | all                             | [patches/react-native-webrtc/](./patches/react-native-webrtc/) |
+| `@fishjam-cloud/react-native-webrtc` | all                             | [patches/fishjam-react-native-webrtc/](./patches/fishjam-react-native-webrtc/) |
+
+## Architecture
+
+```
+SimulatorCamera.app  (container)
+   ↓ XPC
+.app/Contents/Library/SystemExtensions/
+   SimulatorCameraExtension.systemextension
+   ↓ CMIOExtensionStream.send
+macOS CoreMediaIO subsystem
+   ↓ host AVFoundation
+iOS Simulator process
+   ↓ AVCaptureDevice.default(for: .video)
+   "SimulatorCamera Virtual"  ← your app
+```
+
+Full diagrams in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Why this exists
+
+[Software Mansion](https://swmansion.com/) shipped [SimCam][simcam] in
+March 2026 — the same architecture as a polished commercial product
+($19 lifetime). SimulatorCamera is the free, open-source alternative for
+people who'd rather pay $0 and have the source. Both projects exist
+because Apple has not (yet) shipped first-party simulator camera
+support; both rely on Apple's public `CMIOExtension` API.
+
+If you're after polished commercial support, buy SimCam — Software
+Mansion deserves it. If you'd rather contribute fixes back instead of
+opening tickets, you're in the right repo.
+
+[simcam]: https://simcam.swmansion.com
+
+## Roadmap
+
+This is **Act 1 of the iOS Simulator's missing sensor layer.**
+
+- **v1.0** *(now)* — virtual camera, 5 sources, CLI, library patches
+- **v1.1** — IOSurface zero-copy frames (1080p/60fps), front/back camera switch, video pause/scrub
+- **v1.2** — scenario DSL: `simcamctl scenario play receipt-then-qr.json` for `xcodebuild test` integration
+- **v2.0** — microphone passthrough (same architecture, different sensor)
+- **vN** — BLE peripheral simulation, motion sensors, LiDAR — every sensor the iPhone has, simulated
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Good first issues are labelled on the tracker. For release mechanics, see [RELEASING.md](RELEASING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Good first issues are labelled on the tracker.
+For release mechanics, see [RELEASING.md](RELEASING.md).
 
 ## Sponsor
 
-SimulatorCamera is fully MIT-licensed and maintained on donations. If it saves you a device-build loop, consider [sponsoring](https://github.com/sponsors/dautovri) or [buying a coffee](https://www.buymeacoffee.com/dautovri). No paid tier, no license keys, no telemetry — just a tip jar.
+SimulatorCamera is fully MIT-licensed and maintained on donations. If it
+saves you a device-build loop, consider
+[sponsoring](https://github.com/sponsors/dautovri) or
+[buying a coffee](https://www.buymeacoffee.com/dautovri).
 
 ## License
 
