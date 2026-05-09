@@ -23,10 +23,15 @@ settings:
     SWIFT_STRICT_CONCURRENCY: minimal
     DEAD_CODE_STRIPPING: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
-
-# Note: development team is intentionally unset here so the user's Xcode
-# fills it in via "Automatic" signing on first open. For release builds,
-# set DEVELOPMENT_TEAM via xcconfig or environment variable.
+    # Locked to Ruslan's Apple Development team (27EZNUVV57). For
+    # Distribution builds (notarized DMG release), override at the
+    # xcodebuild command line: DEVELOPMENT_TEAM=27EZNUVV57.
+    DEVELOPMENT_TEAM: 27EZNUVV57
+    CODE_SIGN_STYLE: Automatic
+    # Force the modern unified "Apple Development" cert type instead of
+    # the legacy "Mac Developer" that Xcode picks by default for macOS apps.
+    CODE_SIGN_IDENTITY: "Apple Development"
+    "CODE_SIGN_IDENTITY[sdk=macosx*]": "Apple Development"
 
 targets:
   SimulatorCamera:
