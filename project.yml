@@ -88,14 +88,15 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         NSSystemExtensionUsageDescription: SimulatorCamera registers a virtual camera so the iOS Simulator can capture video without a physical device.
+        # Camera Extensions use CMIOExtension Info.plist key only — NOT
+        # NSExtension. NSExtension is for app extensions (Today widgets,
+        # Share extensions, etc.). Camera Extensions are discovered by
+        # CMIOExtensionProvider.startService() in main.swift, with the
+        # Mach service name registered via this dict.
+        # Reference: Apple's Camera Extension Xcode template TemplateInfo.plist
+        # only declares CMIOExtension + NSSystemExtensionUsageDescription.
         CMIOExtension:
           CMIOExtensionMachServiceName: $(TeamIdentifierPrefix)com.dautov.SimulatorCamera.Extension
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.cmio.cmioextension-provider
-          # No module prefix — must match @objc(SimulatorCameraProviderSource)
-          # in SimulatorCameraProvider.swift. Apple's Camera Extension template
-          # uses bare class names here.
-          NSExtensionPrincipalClass: SimulatorCameraProviderSource
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.dautov.SimulatorCamera.Extension
