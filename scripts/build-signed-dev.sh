@@ -34,6 +34,14 @@ if command -v xcodegen >/dev/null 2>&1; then
     xcodegen generate >/dev/null
 fi
 
+# NOTE: Originally tried changing dstSubfolderSpec from 13 (PlugIns) to 16
+# (SystemExtensions) per Xcode's "Embed System Extensions" build phase
+# convention. That broke the copy entirely (spec=16 + empty dstPath did
+# nothing). Spec=13 with dstPath=../Library/SystemExtensions correctly
+# copies to Contents/Library/SystemExtensions/ — that's the path Apple's
+# OSSystemExtensionRequest scans, so we keep spec=13. The issue was
+# elsewhere; documented in the activation diagnostic.
+
 # Kill any running instance so the build doesn't hit "in use" errors
 pkill -f "SimulatorCamera.app/Contents/MacOS/SimulatorCamera" 2>/dev/null || true
 
