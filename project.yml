@@ -92,7 +92,10 @@ targets:
           CMIOExtensionMachServiceName: $(TeamIdentifierPrefix)com.dautov.SimulatorCamera.Extension
         NSExtension:
           NSExtensionPointIdentifier: com.apple.cmio.cmioextension-provider
-          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SimulatorCameraProviderSource
+          # No module prefix — must match @objc(SimulatorCameraProviderSource)
+          # in SimulatorCameraProvider.swift. Apple's Camera Extension template
+          # uses bare class names here.
+          NSExtensionPrincipalClass: SimulatorCameraProviderSource
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.dautov.SimulatorCamera.Extension

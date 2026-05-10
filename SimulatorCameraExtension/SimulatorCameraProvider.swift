@@ -383,6 +383,7 @@ final class SimulatorCameraStreamSource: NSObject, CMIOExtensionStreamSource {
 
 // MARK: - Provider Source
 
+@objc(SimulatorCameraProviderSource)
 final class SimulatorCameraProviderSource: NSObject, CMIOExtensionProviderSource {
 
     private(set) var provider: CMIOExtensionProvider!
