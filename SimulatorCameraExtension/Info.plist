@@ -27,13 +27,6 @@
 	</dict>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
-	<key>NSExtension</key>
-	<dict>
-		<key>NSExtensionPointIdentifier</key>
-		<string>com.apple.cmio.cmioextension-provider</string>
-		<key>NSExtensionPrincipalClass</key>
-		<string>$(PRODUCT_MODULE_NAME).SimulatorCameraProviderSource</string>
-	</dict>
 	<key>NSSystemExtensionUsageDescription</key>
 	<string>SimulatorCamera registers a virtual camera so the iOS Simulator can capture video without a physical device.</string>
 </dict>
