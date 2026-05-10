@@ -43,7 +43,40 @@ final class ExtensionController: NSObject {
 
     func activate() {
         state = .activating
-        lastMessage = "Requesting activation from macOS..."
+        // DIAGNOSTIC: dump what THIS process sees as Bundle.main + the extension
+        // bundle the framework should match. Write to /tmp file so we can read
+        // from terminal regardless of os_log filtering quirks.
+        let mainURL = Bundle.main.bundleURL
+        var diag = "=== Activation diagnostic ===\n"
+        diag += "Bundle.main: \(mainURL.path)\n"
+        let extDir = mainURL.appendingPathComponent("Contents/Library/SystemExtensions")
+        diag += "Looking in: \(extDir.path)\n"
+        diag += "Looking for identifier: \(extensionBundleIdentifier)\n"
+        let exts = (try? FileManager.default.contentsOfDirectory(at: extDir, includingPropertiesForKeys: nil)) ?? []
+        diag += "Extensions dir items: \(exts.count)\n"
+        for url in exts {
+            diag += "  - \(url.lastPathComponent)\n"
+            if let b = Bundle(url: url) {
+                diag += "    bundleId=\(b.bundleIdentifier ?? "<nil>")\n"
+                diag += "    isLoaded=\(b.isLoaded)\n"
+                diag += "    matches=\(b.bundleIdentifier == extensionBundleIdentifier)\n"
+            } else {
+                diag += "    Bundle(url:) returned nil!\n"
+            }
+        }
+        diag += "=== end diagnostic ===\n"
+        log.info("\(diag, privacy: .public)")
+        // App is sandboxed → can't write to /tmp. Use NSTemporaryDirectory()
+        // (per-container temp). Also dump to NSHomeDirectory()/Library/Logs/
+        // which sandboxed apps can write.
+        let containerTmp = NSTemporaryDirectory().appending("simcam-activate-diag.txt")
+        let logsDir = (NSHomeDirectory() as NSString).appendingPathComponent("Library/Logs/SimulatorCamera")
+        try? FileManager.default.createDirectory(atPath: logsDir, withIntermediateDirectories: true)
+        let logFile = (logsDir as NSString).appendingPathComponent("activate-diag.txt")
+        try? diag.write(toFile: containerTmp, atomically: true, encoding: .utf8)
+        try? diag.write(toFile: logFile, atomically: true, encoding: .utf8)
+        lastMessage = "Diag at: \(containerTmp)\nAlso: \(logFile)"
+
         let request = OSSystemExtensionRequest.activationRequest(
             forExtensionWithIdentifier: extensionBundleIdentifier,
             queue: .main
