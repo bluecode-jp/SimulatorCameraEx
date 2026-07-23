@@ -36,19 +36,47 @@ virtual camera through standard `AVFoundation`. **Your existing
 
 [hero GIF lands here in v1.0.0 release]
 
-## 60-second install
+## Install
 
-**1. Install the Mac companion app:**
+> **Status: pre-release. Build from source.** There is no published
+> binary, no Homebrew cask, and no App Store listing yet. Distribution is
+> still being decided — macOS system extensions have real constraints on
+> how they can be shipped to the public. For now you build and sign it
+> yourself with your own Apple developer account.
+
+**1. Build the Mac companion app.**
+
+Requires macOS 14+, Xcode 16+, and
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`):
 
 ```bash
-brew install --cask dautovri/tap/simulatorcamera
-open -a SimulatorCamera
+git clone https://github.com/dautovri/SimulatorCamera.git
+cd SimulatorCamera
+xcodegen generate
+open SimulatorCamera.xcodeproj
 ```
 
-**2. Click Activate, then click Allow when System Settings prompts.**
+In Xcode, set your own signing team on both the **SimulatorCamera** and
+**SimulatorCameraExtension** targets, then build.
+
+**2. Move the built app to `/Applications` and launch it.**
+
+macOS refuses to activate a system extension from anywhere else — running
+straight from Xcode's build directory will fail.
+
+**3. Click Activate, then approve when System Settings prompts.**
+
+Approval lives in System Settings → General → Login Items & Extensions,
+and is needed once per machine.
 
 That's it. No Xcode integration, no `Info.plist` changes, no `#if`
-guards anywhere in your code.
+guards anywhere in your consuming app's code.
+
+> **Not a Swift Package.** SimulatorCamera has no `Package.swift` and
+> cannot be added via SPM, CocoaPods, or Carthage — on purpose. It's a
+> macOS *system extension* (Apple's `CMIOExtension` API), not a library
+> your app links. Install the Mac companion app with the `brew` command
+> above; your iOS app imports and links **nothing** from this project.
 
 **3. Run any iOS Simulator app that uses the camera.** Open it in Xcode
 16+, run on a Simulator, and `AVCaptureDevice.default(for: .video)`

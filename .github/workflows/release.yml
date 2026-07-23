@@ -74,13 +74,3 @@ jobs:
             dist/SimulatorCamera-${{ env.VERSION }}.dmg
             dist/SimulatorCamera-${{ env.VERSION }}.zip
             dist/SimulatorCamera-${{ env.VERSION }}.sha256
-
-  test-spm:
-    name: Swift Package tests
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app
-      - name: swift test
-        run: swift test

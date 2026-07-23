@@ -1,5 +1,10 @@
 # SCMF — Simulator Camera Message Format
 
+> ⚠️ **Historical (v0.2.x).** SCMF was the wire format between the TCP
+> server and the `SimulatorCameraClient` iOS SDK, both removed in v1.0.0.
+> Frames now travel through macOS CoreMediaIO via `CMIOExtensionStream`,
+> so there is no wire protocol and no SDK to link. Kept for reference.
+
 `v1` · little-endian on the wire · framed over TCP.
 
 ## Wire layout
@@ -41,4 +46,10 @@ The protocol is versioned by the 4th byte of `magic`. Current `SCMF` = v1. Futur
 
 ## Reference encoder (Swift)
 
-See [`Sources/SimulatorCameraClient/SCMFDecoder.swift`](../Sources/SimulatorCameraClient/SCMFDecoder.swift) — the `SCMFCodec.encode(_:)` function is the reference implementation.
+The reference implementation lived in `Sources/SimulatorCameraClient/SCMFDecoder.swift`
+(`SCMFCodec.encode(_:)`), deleted in v1.0.0. To read it, check out the last
+commit before removal:
+
+```bash
+git show 3bbc6f6^:Sources/SimulatorCameraClient/SCMFDecoder.swift
+```

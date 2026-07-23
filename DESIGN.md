@@ -1,5 +1,10 @@
 # SimulatorCamera — Design Document
 
+> ⚠️ **Historical (v0.2.x).** This describes the retired TCP + iOS SDK
+> architecture. The shipping design is a macOS `CMIOExtension` system
+> extension with **no SDK and no SwiftPM package** — see
+> [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Overview
 
 SimulatorCamera is a two-part developer tool that feeds synthetic video frames

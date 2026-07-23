@@ -405,12 +405,12 @@ final class SimulatorCameraProviderSource: NSObject, CMIOExtensionProviderSource
         // source's injectFrame method, and its source-switch hook to the
         // device source's activeSource property.
         let dev = deviceSource!
-        Task { @MainActor in
+        Task { @MainActor [weak dev] in
             let listener = XPCListener.shared
-            listener.onFrameReceived = { [weak dev] frame in
+            listener.onFrameReceived = { frame in
                 dev?.injectFrame(frame)
             }
-            listener.onSourceSwitched = { [weak dev] kind in
+            listener.onSourceSwitched = { kind in
                 dev?.activeSource = kind
             }
             listener.start()

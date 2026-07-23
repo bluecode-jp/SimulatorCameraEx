@@ -2,12 +2,12 @@
 #
 # smoke-test.sh — local end-to-end sanity check.
 #
-# 1. `swift build`s the iOS SDK (SimulatorCameraClient) for macOS to make
-#    sure the whole Swift package still compiles after the v0.2.0 shim.
-# 2. `swift test` runs the SCMF codec unit tests.
-# 3. Boots the Mac companion app if an .xcodeproj exists (otherwise reports
-#    what's missing and stops).
-# 4. Opens the iOS Simulator with a recent iPhone runtime.
+# 1. Regenerates the Xcode project from project.yml and builds it.
+#    (This project is NOT a Swift Package — SwiftPM cannot build system
+#    extensions, so there is no `swift build` / `swift test` step.)
+# 2. Verifies the extension is registered with macOS.
+# 3. Pushes a known source via simcamctl and reports stream status.
+# 4. Opens the iOS Simulator so you can confirm frames arrive.
 #
 # Run from the repo root:
 #   ./scripts/smoke-test.sh
@@ -25,52 +25,63 @@ die() { printf "\033[1;31m✗\033[0m %s\n" "$*"; exit 1; }
 say "swift --version"
 swift --version || die "Swift toolchain not found — install Xcode command line tools."
 
-say "swift build"
-swift build
-ok "SwiftPM package compiles."
+command -v xcodegen >/dev/null 2>&1 || die "xcodegen not found — brew install xcodegen"
 
-say "swift test"
-swift test
-ok "Unit tests pass."
+say "xcodegen generate"
+xcodegen generate
+ok "SimulatorCamera.xcodeproj regenerated from project.yml."
 
-MAC_PROJ="apps/MacServer/SimulatorCameraServer.xcodeproj"
-if [[ -d "$MAC_PROJ" ]]; then
-    say "xcodebuild -list ($MAC_PROJ)"
-    xcodebuild -list -project "$MAC_PROJ" | head -40
-    ok "Mac companion project loads."
+say "xcodebuild (Debug)"
+xcodebuild -project SimulatorCamera.xcodeproj \
+    -scheme SimulatorCamera \
+    -configuration Debug \
+    -derivedDataPath .build/mac \
+    build | tail -5
+ok "Container app + extension build."
 
-    say "Launching SimulatorCameraServer.app (debug build)"
-    xcodebuild -project "$MAC_PROJ" \
-        -scheme SimulatorCameraServer \
-        -configuration Debug \
-        -derivedDataPath .build/mac \
-        build | tail -5
-    open ".build/mac/Build/Products/Debug/SimulatorCameraServer.app"
-    ok "Mac server launched — pick 'Mac Camera' and click Start."
+say "systemextensionsctl list"
+if systemextensionsctl list | grep -q "com.dautov.SimulatorCamera.Extension"; then
+    ok "Extension is registered with macOS."
 else
-    warn "No .xcodeproj at $MAC_PROJ yet."
-    warn "Scaffold it with Xcode: New Project → App → macOS → name 'SimulatorCameraServer',"
-    warn "then add the four Swift files under apps/MacServer/SimulatorCameraServer/ to the target."
+    warn "Extension not registered yet."
+    warn "Launch SimulatorCamera.app once and click Activate, then approve in"
+    warn "System Settings → General → Login Items & Extensions."
+fi
+
+SIMCAMCTL=".build/mac/Build/Products/Debug/simcamctl"
+if [[ -x "$SIMCAMCTL" ]]; then
+    say "simcamctl ping"
+    "$SIMCAMCTL" ping || warn "Extension not responding — is it activated?"
+
+    say "simcamctl set-source --qr (smoke fixture)"
+    "$SIMCAMCTL" set-source --qr "https://example.com/smoke-test" || \
+        warn "Could not push QR source."
+
+    say "simcamctl status"
+    "$SIMCAMCTL" status || true
+else
+    warn "simcamctl not built at $SIMCAMCTL"
 fi
 
 say "Booting iOS Simulator"
-SIM_NAME="iPhone 15"
+SIM_NAME="${SIM_NAME:-iPhone 16}"
 xcrun simctl boot "$SIM_NAME" 2>/dev/null || true
 open -a Simulator
-ok "Simulator up. Run the iOS demo app against it and watch for frames."
+ok "Simulator up."
 
 cat <<'EOF'
 
 ---------------------------------------------------------------
 Next manual steps:
-  1. In the Mac server window: choose 'Mac Camera', click Start.
-     You should see 'Streaming from Mac camera' and a frame counter.
-  2. In Xcode, open apps/iOSDemo/ and Run to the iPhone 15 Simulator.
-  3. The demo view should show your webcam feed at ~25–30 FPS with
-     a green "Streaming" badge.
+  1. Run any camera app on the Simulator (Xcode 16+ required).
+  2. AVCaptureDevice.default(for: .video) should return
+     "SimulatorCamera Virtual" and deliver the QR frame pushed above.
 
-If the Simulator stays black with 'Waiting for SimulatorCamera...',
-check the Mac app says 'Client connected' and that port 9876 isn't
-blocked by a local firewall.
+If the camera is missing in the Simulator:
+  - Confirm approval in System Settings → General → Login Items
+    & Extensions.
+  - Confirm `simcamctl status` shows "stream running: yes".
+  - Older Simulator runtimes (pre-Xcode 16) do not enumerate host
+    virtual cameras at all.
 ---------------------------------------------------------------
 EOF

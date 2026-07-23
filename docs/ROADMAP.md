@@ -1,40 +1,54 @@
 # Roadmap
 
-## v0.1 — current · open-source alpha
-- Mac server: built-in **test pattern** source (animated gradient + frame counter)
-- iOS SDK: SCMF decode, `FrameSource` protocol, `SimulatorCameraSession`, `SimulatorCameraPreviewView`
-- Sample iOS app with live preview
-- MIT license, SwiftPM distribution
+SimulatorCamera is **Act 1 of the iOS Simulator's missing sensor layer.**
 
-## v0.2 — "use my real camera"
-- Built-in macOS webcam source (`AVCaptureDevice.default(.builtInWideAngleCamera)`)
-- Local video-file source (`AVAssetReader` → JPEG)
-- Screen-region capture source (`SCStream`)
-- Multi-client broadcast (N iOS simulators at once)
-- Signed & notarized `.dmg`
+There is no SwiftPM / CocoaPods / Carthage package, and none is planned:
+a macOS system extension cannot be shipped as a linked library. **Public
+distribution is still undecided** — see "Open questions" below. Today you
+build and sign it yourself; see the [README](../README.md#install).
 
-## v0.3 — "make it as good as AVFoundation"
-- HEVC codec path (opt-in), ~5× bitrate savings
-- Audio track (SCMF v2 with interleaved audio samples)
-- Depth frames (front TrueDepth parity)
+## v1.0 — current
+- Virtual camera via `CMIOExtension`, visible to Xcode 16+ Simulators
+- Five sources: test pattern, Mac camera, video file, static image, QR code
+- `simcamctl` CLI for CI and agent-driven testing
+- `patch-package` patches for RN / Expo / WebRTC libraries that hard-disable
+  the simulator camera
+- Build-from-source install (bring your own signing team)
+
+## Open questions
+
+**How does this ship to people who won't build it themselves?** macOS
+system extensions constrain the options, and each has a cost:
+
+- **Mac App Store** — works for individual developers, but sandbox and
+  review constraints need validating against a CMIOExtension.
+- **Developer ID + notarized `.dmg` / Homebrew cask** — the nicest
+  developer UX, but shipping system extensions this way to non-MDM Macs
+  has enrollment requirements worth confirming before promising it.
+
+Until one is settled, the README documents build-from-source only. No
+install path is advertised that hasn't actually been published.
+
+## v1.1 — performance & control
+- IOSurface zero-copy frames (1080p / 60 FPS)
 - Front/back camera switch
-- ObjC-callable headers for non-Swift apps
-- CocoaPods + Carthage distribution
+- Video pause / scrub
 
-## v0.4 — "fits in my workflow"
-- Xcode Source Editor Extension: one-click "Enable SimulatorCamera" for the current target
-- Menu-bar Mac app + auto-start on Xcode launch
-- CLI: `simcam --source file.mov --port 9876` for CI and Fastlane lanes
-- Android Emulator client (Kotlin SDK over the same wire protocol)
+## v1.2 — test integration
+- Scenario DSL: `simcamctl scenario play receipt-then-qr.json`
+- First-class `xcodebuild test` integration
 
-## v1.0 — production
-- Paid Pro tier: multi-source mixer, scripted frame sequences (replay attacks for QR/barcode QA), per-simulator routing
-- Sparkle auto-update
-- Enterprise license option (team-wide notarized pkg + offline SDK artifact)
-- Uptime guarantees, commercial support SLA
+## v2.0 — beyond video
+- Microphone passthrough (same architecture, different sensor)
 
-## Post-1.0 backlog
+## Post-2.0 backlog
+- BLE peripheral simulation
+- Motion sensors, LiDAR
 - Visual-regression harness: pipe frames into XCTest screenshot tests
-- Ghost-frame injection for glitch / jitter / low-light tests (reliability fuzzing)
-- Detox / Appium bindings
-- Linux server port (for headless CI agents driving iOS Simulators over network)
+- Android Emulator support
+
+## Retired
+
+The pre-1.0 roadmap targeted a TCP server + iOS SDK with SwiftPM,
+CocoaPods, and Carthage distribution. That architecture was removed in
+v1.0.0 — see [CHANGELOG.md](../CHANGELOG.md) and [DESIGN.md](../DESIGN.md).

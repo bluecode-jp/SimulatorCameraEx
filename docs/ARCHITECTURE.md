@@ -1,52 +1,100 @@
 # Architecture
 
+SimulatorCamera registers a **virtual camera at the macOS system level**
+using Apple's `CMIOExtension` API. The iOS Simulator picks it up through
+standard `AVFoundation`, exactly as it would a physical webcam.
+
+There is **no iOS SDK and no Swift Package.** Your app links nothing.
+
 ## Components
 
 ```
-┌────────────────────────────────────────────────┐          ┌────────────────────────────────────────┐
-│           SimCameraServer (macOS)              │          │     iOS Simulator: your app            │
-│                                                │          │                                        │
-│  ┌──────────────┐  ┌────────────────────────┐  │   TCP    │  ┌────────────────────────────────┐    │
-│  │ FrameSource  │→ │ JPEG encoder (ImageIO) │→ │─────────▶│  │ SimulatorCameraSession         │    │
-│  │  (pattern /  │  │ SCMF packer            │  │  :9876   │  │   └ SCMFStreamDecoder          │    │
-│  │  webcam /    │  │ NWListener (TCP)       │  │          │  │   └ SCMFCodec.pixelBuffer      │    │
-│  │  video file) │  │                        │  │          │  │ FrameSourceDelegate callback   │    │
-│  └──────────────┘  └────────────────────────┘  │          │  └────────────────────────────────┘    │
-│                                                │          │                                        │
-└────────────────────────────────────────────────┘          └────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  SimulatorCamera.app  (container, macOS 14+)                 │
+│                                                              │
+│   MainView / SourceManager      ← SwiftUI source picker      │
+│   ExtensionController           ← OSSystemExtensionRequest    │
+│   XPCClient ──────────────┐                                  │
+│   FrameSource impls:      │                                  │
+│     MacCameraSource       │                                  │
+│     VideoFileSource       │                                  │
+│     ImageSource           │                                  │
+│     QRSource              │                                  │
+└───────────────────────────┼──────────────────────────────────┘
+                            │ XPC  (Shared/XPCContract.swift)
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│  SimulatorCameraExtension.systemextension                    │
+│  (bundled at .app/Contents/Library/SystemExtensions/)        │
+│                                                              │
+│   XPCListener               ← receives frames + source cmds  │
+│   SimulatorCameraProvider   ← CMIOExtensionDeviceSource      │
+│                               CMIOExtensionStreamSource      │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ CMIOExtensionStream.send
+                            ▼
+              macOS CoreMediaIO subsystem
+                            │
+                            ▼ host AVFoundation
+              ┌───────────────────────────────┐
+              │  iOS Simulator process        │
+              │  AVCaptureDevice.default(...) │
+              │  → "SimulatorCamera Virtual"  │
+              └───────────────────────────────┘
 ```
 
-## Threading
+`simcamctl` is a separate CLI target that speaks the same XPC contract
+(`simcamctl/SimCamCLIClient.swift`), so CI scripts and agents can drive
+the source selection without the GUI.
 
-**Server:**
-- UI + source picker on `@MainActor`.
-- Source acquisition (`AVCaptureSession` or `AVAssetReader`) runs on its own queue.
-- `NWListener` + each `NWConnection` run on a single `com.simulatorcamera.server.net` serial queue to serialize sends.
-- JPEG encoding happens off-main via `CIContext.jpegRepresentation` on a shared worker queue.
+## Process model
 
-**Client:**
-- Networking and decoding run on `com.simulatorcamera.client.network` serial queue.
-- All delegate callbacks are hopped to `DispatchQueue.main`. Your Vision/CoreML pipeline can dispatch back off-main as needed.
+| Process | Role | Lifetime |
+| --- | --- | --- |
+| `SimulatorCamera.app` | UI, frame production, activation requests | User-controlled |
+| `SimulatorCameraExtension` | Virtual camera device + stream | Managed by `systemextensionsd` |
+| `simcamctl` | Scripted control | Per-invocation |
 
-## Why JPEG, not HEVC?
+The extension runs **outside** the app. It keeps serving the last pushed
+frame even when the container app is closed, because CoreMediaIO owns its
+lifecycle — not the app.
 
-- No codec licensing questions.
-- `ImageIO` + `CGImageSourceCreateWithData` decode is fast on M-series and simulator ARM64.
-- At 720p / Q0.8 we average ~55 KB/frame → 13 Mb/s at 30 FPS, trivial over loopback.
+## Activation
 
-HEVC path arrives in v0.3 as an opt-in flag. That adds a 4-byte `codec` word in the payload header.
+`ExtensionController` submits an `OSSystemExtensionRequest.activationRequest`.
+macOS prompts the user to approve in System Settings → General → Login Items
+& Extensions. This approval is required once per machine, and is why the app
+must be **signed, notarized, and installed in `/Applications`** — system
+extensions are refused from arbitrary locations.
 
-## Why not a socket file (Unix domain) or shared memory?
+## Frame path
 
-- The iOS Simulator shares a filesystem with the host but sandbox rules and file ownership make UDS flaky across Xcode updates.
-- Shared memory across the Simulator ↔ host boundary isn't supported publicly.
-- TCP over loopback is boring and works everywhere, forever.
+1. A `FrameSource` produces a `CVPixelBuffer` (1280×720, 30 FPS).
+2. The container app sends it over XPC to the extension.
+3. `SimulatorCameraProvider` wraps it in a `CMSampleBuffer` and calls
+   `CMIOExtensionStream.send`.
+4. CoreMediaIO delivers it to every host client — including the Simulator.
+
+Frames are currently copied across the XPC boundary. IOSurface-backed
+zero-copy is the v1.1 target (see the roadmap in the [README](../README.md#roadmap)).
+
+## Why a system extension, not a TCP server + SDK?
+
+v0.2.x used a localhost TCP server and an iOS SDK the app had to import.
+That required source changes in every consuming app (`import
+SimulatorCameraClient`, type substitutions, `#if targetEnvironment(simulator)`
+guards). The `CMIOExtension` approach needs **none** of that: the Simulator
+sees a real `AVCaptureDevice`, so unmodified `AVCaptureSession` code works.
+
+The retired design is preserved in [DESIGN.md](../DESIGN.md) and
+[PROTOCOL.md](PROTOCOL.md) for reference.
 
 ## Failure modes
 
 | Symptom | Likely cause |
 | --- | --- |
-| "Invalid magic" error on iOS | Server sent data with wrong endianness, or the stream got corrupted. Close and reconnect. |
-| Alignment / `EXC_BREAKPOINT` at decode | Use `loadUnaligned(fromByteOffset:as:)` instead of `load(...)` on ARM64. |
-| Simulator can't connect | Mac app sandbox missing `com.apple.security.network.server`. |
-| Frames stop after ~256 KB | Not draining `decoder.nextFrame()` in a loop — only pulling the first frame per receive. |
+| Camera missing in Simulator | Extension not approved. Check System Settings → General → Login Items & Extensions. |
+| Activation prompt never appears | App is not in `/Applications`, or the build is unsigned. |
+| `simcamctl ping` fails | Extension not running. Launch the container app once to activate it. |
+| Simulator shows black frames | No source selected, or the source failed to start — check the app's source picker. |
+| Camera works in Photo Booth but not the Simulator | Requires Xcode 16+; older Simulator runtimes don't enumerate host virtual cameras. |

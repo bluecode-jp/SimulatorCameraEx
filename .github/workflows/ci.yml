@@ -7,27 +7,44 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Swift build & test
-    runs-on: macos-14
+  build:
+    name: Build (app + extension + CLI)
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+      - name: Xcode version
+        run: xcodebuild -version
 
-      - name: Swift version
-        run: swift --version
+      - name: Install XcodeGen
+        run: brew install xcodegen
 
-      - name: Build
-        run: swift build -c debug
+      - name: Generate project
+        run: xcodegen generate
 
-      - name: Test
-        run: swift test --parallel
+      # Code signing is disabled on CI: the container app and the bundled
+      # CMIOExtension are signed only for release builds, where the
+      # Developer ID cert is available. This job verifies the code compiles
+      # and the extension embeds correctly.
+      - name: Build SimulatorCamera (app + embedded extension)
+        run: |
+          xcodebuild -project SimulatorCamera.xcodeproj \
+                     -scheme SimulatorCamera \
+                     -configuration Debug \
+                     CODE_SIGNING_ALLOWED=NO \
+                     build
+
+      - name: Build simcamctl
+        run: |
+          xcodebuild -project SimulatorCamera.xcodeproj \
+                     -scheme simcamctl \
+                     -configuration Debug \
+                     CODE_SIGNING_ALLOWED=NO \
+                     build
 
   lint:
     name: SwiftLint
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Install SwiftLint

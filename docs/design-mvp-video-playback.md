@@ -3,9 +3,12 @@
 
 **Author:** Ruslan Dautov (dautovri)
 **Date:** 2026-04-19
-**Status:** APPROVED
+**Status:** SUPERSEDED (historical — v0.2.x TCP/SwiftPM architecture)
 **Branch:** main
 **Supersedes:** None (first design doc)
+**Superseded by:** v1.0.0 `CMIOExtension` architecture — see
+[ARCHITECTURE.md](ARCHITECTURE.md). The SwiftPM targets described below no
+longer exist; there is no `Package.swift` and no SPM distribution.
 
 ---
 

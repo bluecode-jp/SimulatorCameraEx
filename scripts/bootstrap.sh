@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Bootstrap a fresh checkout: build SDK, lint, run tests.
+# Bootstrap a fresh checkout: generate the Xcode project and build.
+#
+# Note: this project is NOT a Swift Package. System extensions cannot be
+# built by SwiftPM, so the project is Xcode-managed via project.yml.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -8,11 +11,19 @@ cd "$ROOT"
 echo "▶ Swift version"
 swift --version
 
-echo "▶ Building SimulatorCameraClient"
-swift build -c debug
+if ! command -v xcodegen >/dev/null 2>&1; then
+  echo "✖ xcodegen not found. Install it with: brew install xcodegen" >&2
+  exit 1
+fi
 
-echo "▶ Running tests"
-swift test --parallel
+echo "▶ Generating SimulatorCamera.xcodeproj from project.yml"
+xcodegen generate
+
+echo "▶ Building (Debug)"
+xcodebuild -project SimulatorCamera.xcodeproj \
+           -scheme SimulatorCamera \
+           -configuration Debug \
+           build
 
 if command -v swiftlint >/dev/null 2>&1; then
   echo "▶ SwiftLint"
@@ -20,4 +31,5 @@ if command -v swiftlint >/dev/null 2>&1; then
 fi
 
 echo "✅ Bootstrap complete."
-echo "   Next: open apps/MacServer/SimCameraServer.xcodeproj to run the Mac server."
+echo "   Next: open SimulatorCamera.xcodeproj"
+echo "   To activate the extension locally: systemextensionsctl developer on"

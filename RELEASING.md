@@ -1,11 +1,20 @@
 # Releasing SimulatorCamera
 
-This runbook cuts a signed, notarized, Homebrew-installable release of the
-Mac companion app and the iOS Swift Package.
+This runbook cuts a signed, notarized release of the Mac companion app.
+
+> ⚠️ **Not yet exercised.** No release has been published and no tag has
+> ever been pushed — `v0.2.0` was written up in release notes but never
+> tagged, which is why its documented install commands don't work. The
+> public distribution channel is also still undecided (see
+> [docs/ROADMAP.md](docs/ROADMAP.md#open-questions)), so the Homebrew step
+> below is provisional. Validate each step the first time through, and
+> don't advertise an install path in the README until it is actually live.
+
+There is no iOS Swift Package to release — the SDK was removed in v1.0.0.
 
 ## Prereqs (one-time per machine)
 
-- Xcode 15.4+ with a configured Apple ID that has Developer ID signing privileges.
+- Xcode 16+ with a configured Apple ID that has Developer ID signing privileges.
 - A stored `notarytool` profile so CI and local builds don't need to handle secrets inline:
   ```
   xcrun notarytool store-credentials "SimulatorCameraNotary" \
@@ -70,16 +79,21 @@ Mac companion app and the iOS Swift Package.
    ```
    brew update
    brew upgrade --cask simulatorcamera
-   open -a SimulatorCameraServer
+   open -a SimulatorCamera
    ```
-   Then in a throwaway iOS app:
+   Click **Activate** and approve in System Settings → General → Login
+   Items & Extensions, then push a known source:
+   ```
+   simcamctl set-source --qr "https://example.com/release-check"
+   simcamctl status
+   ```
+   Then in a throwaway iOS app on an Xcode 16+ Simulator — with **no
+   imports and no project changes**:
    ```swift
-   import SimulatorCameraClient
-
-   SimulatorCamera.configure()
-   SimulatorCamera.start()
+   let device = AVCaptureDevice.default(for: .video)
+   // → "SimulatorCamera Virtual"
    ```
-   Verify frames arrive at 25–30 FPS.
+   Verify frames arrive at 30 FPS.
 
 8. **Announce**
    - Tweet / LinkedIn / /r/iOSProgramming post linking to the Release.

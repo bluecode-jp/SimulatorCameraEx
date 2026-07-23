@@ -1,5 +1,17 @@
 # SimulatorCamera v0.2.0 — "Use my real camera"
 
+> ⚠️ **Historical release notes — do not follow these instructions.**
+> v0.2.x used a TCP server + iOS SDK (`SimulatorCameraClient`) distributed
+> via SwiftPM. That architecture was **removed in v1.0.0**. There is no
+> `Package.swift`, and **SimulatorCamera cannot be installed via SPM,
+> CocoaPods, or Carthage.** It is now a macOS system extension, built and
+> signed from source — your iOS app links nothing. Neither the SwiftPM
+> snippet nor the `brew` command below works: **v0.2.0 was never tagged
+> and no release was ever published.** See the
+> [README](../README.md#install) for current install steps and
+> [CHANGELOG.md](../CHANGELOG.md) for the migration path. Kept for
+> historical reference only.
+
 *Released 2026-04-15*
 
 This is the first release that lets you point an existing `AVCaptureSession`-shaped codebase at a live Mac webcam with a one-for-one type substitution — no branches, no stubs, no cables.
@@ -13,12 +25,15 @@ This is the first release that lets you point an existing `AVCaptureSession`-sha
 **One-line install.**
 
 ```
+# ⚠️ DOES NOT WORK — no cask was ever published to the tap.
 brew install --cask dautovri/tap/simulatorcamera
 ```
 
 And in Swift:
 
 ```swift
+// ⚠️ DOES NOT WORK — the 0.2.0 tag was never pushed, so SwiftPM cannot
+// resolve this. The package itself was removed in v1.0.0.
 dependencies: [
     .package(url: "https://github.com/dautovri/SimulatorCamera.git", from: "0.2.0"),
 ]
