@@ -13,7 +13,7 @@ import SwiftUI
 @main
 struct SimulatorCameraApp: App {
     @State private var extensionController = ExtensionController()
-    @State private var xpcClient = XPCClient()
+    @State private var xpcClient: XPCClient
     @State private var sourceManager: SourceManager
 
     init() {
@@ -29,7 +29,8 @@ struct SimulatorCameraApp: App {
                 .environment(xpcClient)
                 .environment(sourceManager)
                 .frame(minWidth: 540, minHeight: 520)
-                .onAppear {
+                .task {
+                    extensionController.check()
                     xpcClient.connect()
                 }
         }

@@ -3,12 +3,9 @@
 //  SimulatorCameraExtension
 //
 //  CMIOExtensionProvider + DeviceSource + StreamSource for the
-//  "SimulatorCamera Virtual" camera. v1.0.0 Phase 1 ships a scrolling
-//  white-stripe test pattern (adapted from Apple's Camera Extension
-//  template) at 1920x1080 / 60fps to prove the pipeline works.
-//
-//  v1.1+ replaces the test pattern with XPC-pushed frames from the
-//  container app's Mac camera capture.
+//  "SimulatorCamera Virtual" camera. Advertises one format — the canonical
+//  1280x720 BGRA @ 30fps from XPCContract — and emits either a built-in
+//  scrolling-stripe test pattern or frames pushed by the container app.
 //
 
 import Foundation
@@ -17,7 +14,7 @@ import IOKit.audio
 import os.log
 
 private let kWhiteStripeHeight: Int = 10
-private let kFrameRate: Int = 60
+private let log = Logger(subsystem: "com.dautov.SimulatorCamera.Extension", category: "provider")
 
 // Stable UUIDs so System Profiler / AVCaptureDevice see the same device
 // across launches. Generated once with `uuidgen`.
@@ -31,6 +28,9 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
     private(set) var device: CMIOExtensionDevice!
     private var _streamSource: SimulatorCameraStreamSource!
 
+    /// Number of CMIO clients that asked us to stream. Guarded by `_lock`
+    /// because CMIO calls start/stop on its client queue while injectFrame
+    /// arrives on the XPC queue.
     private var _streamingCounter: UInt32 = 0
     private var _timer: DispatchSourceTimer?
     private let _timerQueue = DispatchQueue(
@@ -51,11 +51,19 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
     /// Active source kind. testPattern = local timer emission. Anything else
     /// = container is pushing frames via XPC, the timer no-ops.
     private var _activeSource: SimCamSourceKind = .testPattern
-    private let _sourceLock = NSLock()
+    private let _lock = NSLock()
+
+    /// Fired (on whatever queue CMIO used) whenever streaming flips on/off.
+    var onStreamingChanged: ((Bool) -> Void)?
 
     var activeSource: SimCamSourceKind {
-        get { _sourceLock.lock(); defer { _sourceLock.unlock() }; return _activeSource }
-        set { _sourceLock.lock(); _activeSource = newValue; _sourceLock.unlock() }
+        get { _lock.lock(); defer { _lock.unlock() }; return _activeSource }
+        set { _lock.lock(); _activeSource = newValue; _lock.unlock() }
+    }
+
+    var isStreaming: Bool {
+        _lock.lock(); defer { _lock.unlock() }
+        return _streamingCounter > 0
     }
 
     init(localizedName: String) {
@@ -68,7 +76,7 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
             source: self
         )
 
-        let dims = CMVideoDimensions(width: 1920, height: 1080)
+        let dims = CMVideoDimensions(width: Int32(kSimCamFrameWidth), height: Int32(kSimCamFrameHeight))
         CMVideoFormatDescriptionCreate(
             allocator: kCFAllocatorDefault,
             codecType: kCVPixelFormatType_32BGRA,
@@ -86,10 +94,11 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
         ]
         CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, pixelBufferAttributes, &_bufferPool)
 
+        let frameDuration = CMTime(value: 1, timescale: Int32(kSimCamFrameRate))
         let videoStreamFormat = CMIOExtensionStreamFormat(
             formatDescription: _videoDescription,
-            maxFrameDuration: CMTime(value: 1, timescale: Int32(kFrameRate)),
-            minFrameDuration: CMTime(value: 1, timescale: Int32(kFrameRate)),
+            maxFrameDuration: frameDuration,
+            minFrameDuration: frameDuration,
             validFrameDurations: nil
         )
         _bufferAuxAttributes = [kCVPixelBufferPoolAllocationThresholdKey: 5]
@@ -126,14 +135,28 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
         // No settable device properties in v1.0.
     }
 
+    // MARK: Streaming lifecycle
+
     func startStreaming() {
-        guard let _ = _bufferPool else { return }
+        guard _bufferPool != nil else { return }
+
+        _lock.lock()
         _streamingCounter += 1
+        let isFirstClient = _streamingCounter == 1
+        _lock.unlock()
 
-        _timer = DispatchSource.makeTimerSource(flags: .strict, queue: _timerQueue)
-        _timer!.schedule(deadline: .now(), repeating: 1.0 / Double(kFrameRate), leeway: .seconds(0))
+        // Only the first client creates the timer. Creating one per client
+        // (as Apple's template does) leaks the earlier timers: they keep
+        // firing forever, doubling the frame rate and never stopping.
+        guard isFirstClient else { return }
 
-        _timer!.setEventHandler { [weak self] in
+        let timer = DispatchSource.makeTimerSource(flags: .strict, queue: _timerQueue)
+        timer.schedule(
+            deadline: .now(),
+            repeating: 1.0 / Double(kSimCamFrameRate),
+            leeway: .milliseconds(1)
+        )
+        timer.setEventHandler { [weak self] in
             guard let self else { return }
             // Test pattern timer no-ops when an external source (Mac camera,
             // video, image, QR) is pushing frames over XPC. The XPC-pushed
@@ -142,72 +165,52 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
                 self.emitTestPatternFrame()
             }
         }
-        _timer!.setCancelHandler { }
-        _timer!.resume()
+        _timer?.cancel()
+        _timer = timer
+        timer.resume()
+        log.info("streaming started")
+        onStreamingChanged?(true)
     }
 
     func stopStreaming() {
-        if _streamingCounter > 1 {
-            _streamingCounter -= 1
-        } else {
-            _streamingCounter = 0
-            if let timer = _timer {
-                timer.cancel()
-                _timer = nil
-            }
-        }
+        _lock.lock()
+        if _streamingCounter > 0 { _streamingCounter -= 1 }
+        let isLastClient = _streamingCounter == 0
+        _lock.unlock()
+
+        guard isLastClient else { return }
+        _timer?.cancel()
+        _timer = nil
+        log.info("streaming stopped")
+        onStreamingChanged?(false)
     }
 
-    /// Generate one frame of the scrolling-white-stripe-on-black test pattern
-    /// and push it to the active CMIOExtensionStream.
-    private func emitTestPatternFrame() {
-        var err: OSStatus = 0
-        let now = CMClockGetTime(CMClockGetHostTimeClock())
+    // MARK: Frame emission
 
+    /// Pull a buffer from the pool. Nil (and a log line) when the pool is
+    /// exhausted, which means the consumer is not draining frames.
+    private func dequeuePixelBuffer() -> CVPixelBuffer? {
         var pixelBuffer: CVPixelBuffer?
-        err = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(
+        let err = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(
             kCFAllocatorDefault,
             _bufferPool,
             _bufferAuxAttributes,
             &pixelBuffer
         )
-        if err != 0 {
-            os_log(.error, "out of pixel buffers \(err)")
-            return
+        if err != kCVReturnSuccess {
+            log.error("out of pixel buffers (\(err))")
+            return nil
         }
+        return pixelBuffer
+    }
 
-        guard let pixelBuffer else { return }
-
-        CVPixelBufferLockBaseAddress(pixelBuffer, [])
-        var bufferPtr = CVPixelBufferGetBaseAddress(pixelBuffer)!
-        let width = CVPixelBufferGetWidth(pixelBuffer)
-        let height = CVPixelBufferGetHeight(pixelBuffer)
-        let rowBytes = CVPixelBufferGetBytesPerRow(pixelBuffer)
-        memset(bufferPtr, 0, rowBytes * height)
-
-        let whiteStripeStartRow = _whiteStripeStartRow
-        if _whiteStripeIsAscending {
-            _whiteStripeStartRow = whiteStripeStartRow - 1
-            _whiteStripeIsAscending = _whiteStripeStartRow > 0
-        } else {
-            _whiteStripeStartRow = whiteStripeStartRow + 1
-            _whiteStripeIsAscending = _whiteStripeStartRow >= (UInt32(height) - UInt32(kWhiteStripeHeight))
-        }
-        bufferPtr += rowBytes * Int(whiteStripeStartRow)
-        for _ in 0..<kWhiteStripeHeight {
-            for _ in 0..<width {
-                var white: UInt32 = 0xFFFFFFFF
-                memcpy(bufferPtr, &white, MemoryLayout.size(ofValue: white))
-                bufferPtr += MemoryLayout.size(ofValue: white)
-            }
-        }
-
-        CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
-
-        var sbuf: CMSampleBuffer!
+    /// Stamp `pixelBuffer` with the host clock and hand it to the stream.
+    private func send(_ pixelBuffer: CVPixelBuffer) -> OSStatus {
+        var sbuf: CMSampleBuffer?
         var timingInfo = CMSampleTimingInfo()
-        timingInfo.presentationTimeStamp = CMClockGetTime(CMClockGetHostTimeClock())
-        err = CMSampleBufferCreateForImageBuffer(
+        let now = CMClockGetTime(CMClockGetHostTimeClock())
+        timingInfo.presentationTimeStamp = now
+        let err = CMSampleBufferCreateForImageBuffer(
             allocator: kCFAllocatorDefault,
             imageBuffer: pixelBuffer,
             dataReady: true,
@@ -217,54 +220,82 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
             sampleTiming: &timingInfo,
             sampleBufferOut: &sbuf
         )
-        if err == 0 {
-            _streamSource.stream.send(
-                sbuf,
-                discontinuity: [],
-                hostTimeInNanoseconds: UInt64(timingInfo.presentationTimeStamp.seconds * Double(NSEC_PER_SEC))
-            )
+        guard err == noErr, let sbuf else {
+            log.error("CMSampleBufferCreateForImageBuffer failed (\(err))")
+            return err
         }
-        os_log(.debug, "video frame ts=\(timingInfo.presentationTimeStamp.seconds) now=\(now.seconds) err=\(err)")
+        _streamSource.stream.send(
+            sbuf,
+            discontinuity: [],
+            hostTimeInNanoseconds: UInt64(max(0, now.seconds) * Double(NSEC_PER_SEC))
+        )
+        return noErr
+    }
+
+    /// Generate one frame of the scrolling-white-stripe-on-black test pattern
+    /// and push it to the active CMIOExtensionStream.
+    private func emitTestPatternFrame() {
+        guard let pixelBuffer = dequeuePixelBuffer() else { return }
+
+        CVPixelBufferLockBaseAddress(pixelBuffer, [])
+        if let base = CVPixelBufferGetBaseAddress(pixelBuffer) {
+            let width = CVPixelBufferGetWidth(pixelBuffer)
+            let height = CVPixelBufferGetHeight(pixelBuffer)
+            let rowBytes = CVPixelBufferGetBytesPerRow(pixelBuffer)
+            memset(base, 0, rowBytes * height)
+
+            let maxStart = UInt32(max(0, height - kWhiteStripeHeight))
+            let stripeStart = min(_whiteStripeStartRow, maxStart)
+            if _whiteStripeIsAscending {
+                _whiteStripeStartRow = stripeStart > 0 ? stripeStart - 1 : 0
+                _whiteStripeIsAscending = _whiteStripeStartRow > 0
+            } else {
+                _whiteStripeStartRow = stripeStart + 1
+                _whiteStripeIsAscending = _whiteStripeStartRow >= maxStart
+            }
+
+            var rowPtr = base.advanced(by: rowBytes * Int(stripeStart))
+            let rowsToPaint = min(kWhiteStripeHeight, height - Int(stripeStart))
+            for _ in 0..<max(0, rowsToPaint) {
+                memset(rowPtr, 0xFF, width * kSimCamBytesPerPixel)
+                rowPtr += rowBytes
+            }
+        }
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
+
+        _ = send(pixelBuffer)
     }
 
     /// Inject a frame pushed from the container app over XPC. BGRA bytes →
-    /// CVPixelBuffer → CMSampleBuffer → CMIOExtensionStream.send.
-    /// Called from XPC reply handlers (off the timer queue).
-    func injectFrame(_ frame: SimCamFrame) {
+    /// pooled CVPixelBuffer → CMSampleBuffer → CMIOExtensionStream.send.
+    /// Called on the XPC delivery queue. Returns false when the frame was
+    /// rejected (not streaming, malformed, wrong geometry) so the sender
+    /// can see it in the reply.
+    func injectFrame(_ frame: SimCamFrame) -> Bool {
         // Only inject when streaming is actually active. Otherwise we waste work.
-        guard _streamingCounter > 0 else { return }
-        guard frame.pixelFormat == kCVPixelFormatType_32BGRA else {
-            os_log(.error, "injectFrame: unsupported pixel format \(frame.pixelFormat)")
-            return
-        }
+        guard isStreaming else { return false }
 
-        var pixelBuffer: CVPixelBuffer?
-        let attrs: [CFString: Any] = [
-            kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary,
-        ]
-        let createStatus = CVPixelBufferCreate(
-            kCFAllocatorDefault,
-            frame.width,
-            frame.height,
-            frame.pixelFormat,
-            attrs as CFDictionary,
-            &pixelBuffer
-        )
-        guard createStatus == kCVReturnSuccess, let pb = pixelBuffer else {
-            os_log(.error, "injectFrame: CVPixelBufferCreate failed status=\(createStatus)")
-            return
+        if let problem = frame.validationError() {
+            log.error("injectFrame rejected: \(problem, privacy: .public)")
+            return false
         }
+        guard frame.isCanonicalSize else {
+            log.error("injectFrame rejected: \(frame.width)x\(frame.height) != \(kSimCamFrameWidth)x\(kSimCamFrameHeight)")
+            return false
+        }
+        guard let pb = dequeuePixelBuffer() else { return false }
 
         CVPixelBufferLockBaseAddress(pb, [])
         if let dest = CVPixelBufferGetBaseAddress(pb) {
             let destRowBytes = CVPixelBufferGetBytesPerRow(pb)
+            let pixelRowBytes = frame.width * kSimCamBytesPerPixel
             frame.bgraData.withUnsafeBytes { srcRaw in
                 guard let src = srcRaw.baseAddress else { return }
-                if destRowBytes == frame.bytesPerRow {
+                if destRowBytes == frame.bytesPerRow, srcRaw.count >= frame.bytesPerRow * frame.height {
                     memcpy(dest, src, frame.bytesPerRow * frame.height)
                 } else {
-                    // Different alignment: copy row by row.
-                    let copyBytes = min(destRowBytes, frame.bytesPerRow)
+                    // Different alignment: copy only the pixel bytes of each row.
+                    let copyBytes = min(destRowBytes, pixelRowBytes)
                     for row in 0..<frame.height {
                         memcpy(
                             dest.advanced(by: row * destRowBytes),
@@ -277,32 +308,7 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
         }
         CVPixelBufferUnlockBaseAddress(pb, [])
 
-        // Build a CMSampleBuffer matching our advertised format.
-        var sampleBuffer: CMSampleBuffer!
-        var timing = CMSampleTimingInfo()
-        timing.presentationTimeStamp = CMTime(
-            seconds: frame.timestampSeconds,
-            preferredTimescale: 1_000_000_000
-        )
-        let cmStatus = CMSampleBufferCreateForImageBuffer(
-            allocator: kCFAllocatorDefault,
-            imageBuffer: pb,
-            dataReady: true,
-            makeDataReadyCallback: nil,
-            refcon: nil,
-            formatDescription: _videoDescription,
-            sampleTiming: &timing,
-            sampleBufferOut: &sampleBuffer
-        )
-        if cmStatus == 0, let sb = sampleBuffer {
-            _streamSource.stream.send(
-                sb,
-                discontinuity: [],
-                hostTimeInNanoseconds: UInt64(frame.timestampSeconds * Double(NSEC_PER_SEC))
-            )
-        } else {
-            os_log(.error, "injectFrame: CMSampleBufferCreate failed status=\(cmStatus)")
-        }
+        return send(pb) == noErr
     }
 }
 
@@ -336,7 +342,7 @@ final class SimulatorCameraStreamSource: NSObject, CMIOExtensionStreamSource {
 
     var activeFormatIndex: Int = 0 {
         didSet {
-            if activeFormatIndex >= 1 { os_log(.error, "Invalid index") }
+            if activeFormatIndex >= 1 { log.error("Invalid format index \(self.activeFormatIndex)") }
         }
     }
 
@@ -350,7 +356,7 @@ final class SimulatorCameraStreamSource: NSObject, CMIOExtensionStreamSource {
             streamProperties.activeFormatIndex = 0
         }
         if properties.contains(.streamFrameDuration) {
-            streamProperties.frameDuration = CMTime(value: 1, timescale: Int32(kFrameRate))
+            streamProperties.frameDuration = CMTime(value: 1, timescale: Int32(kSimCamFrameRate))
         }
         return streamProperties
     }
@@ -389,6 +395,9 @@ final class SimulatorCameraProviderSource: NSObject, CMIOExtensionProviderSource
     private(set) var provider: CMIOExtensionProvider!
     private var deviceSource: SimulatorCameraDeviceSource!
 
+    private let _clientLock = NSLock()
+    private var _clientCount = 0
+
     init(clientQueue: DispatchQueue?) {
         super.init()
         provider = CMIOExtensionProvider(source: self, clientQueue: clientQueue)
@@ -400,15 +409,17 @@ final class SimulatorCameraProviderSource: NSObject, CMIOExtensionProviderSource
             fatalError("Failed to add device: \(error.localizedDescription)")
         }
 
-        // Start the XPC listener so the container app can push frames + switch
-        // sources. The listener wires its frame-receive hook to the device
-        // source's injectFrame method, and its source-switch hook to the
-        // device source's activeSource property.
+        // Wire the XPC listener to the device source: pushed frames go
+        // straight into injectFrame, source switches flip activeSource, and
+        // streaming state flows back into the status snapshot.
         let dev = deviceSource!
+        dev.onStreamingChanged = { running in
+            Task { @MainActor in XPCListener.shared.isStreamRunning = running }
+        }
         Task { @MainActor [weak dev] in
             let listener = XPCListener.shared
             listener.onFrameReceived = { frame in
-                dev?.injectFrame(frame)
+                dev?.injectFrame(frame) ?? false
             }
             listener.onSourceSwitched = { kind in
                 dev?.activeSource = kind
@@ -418,11 +429,21 @@ final class SimulatorCameraProviderSource: NSObject, CMIOExtensionProviderSource
     }
 
     func connect(to client: CMIOExtensionClient) throws {
-        // v1.0 no-op. Phase 2 will track connected clients for diagnostics.
+        _clientLock.lock()
+        _clientCount += 1
+        let count = _clientCount
+        _clientLock.unlock()
+        log.info("CMIO client connected (total=\(count))")
+        Task { @MainActor in XPCListener.shared.connectedClientCount = count }
     }
 
     func disconnect(from client: CMIOExtensionClient) {
-        // v1.0 no-op.
+        _clientLock.lock()
+        _clientCount = max(0, _clientCount - 1)
+        let count = _clientCount
+        _clientLock.unlock()
+        log.info("CMIO client disconnected (remaining=\(count))")
+        Task { @MainActor in XPCListener.shared.connectedClientCount = count }
     }
 
     var availableProperties: Set<CMIOExtensionProperty> {

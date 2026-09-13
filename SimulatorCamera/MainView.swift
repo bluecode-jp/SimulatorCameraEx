@@ -94,11 +94,14 @@ struct MainView: View {
             }
 
             HStack {
-                Text("Frames pushed: \(sourceManager.framesPushed)")
+                Text(frameCounterText)
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
+                if sourceManager.isSwitching {
+                    ProgressView().controlSize(.small)
+                }
                 Spacer()
-                if sourceManager.activeKind != .testPattern {
+                if sourceManager.activeKind != .testPattern || sourceManager.isSwitching {
                     Button("Stop") { sourceManager.stop() }
                         .controlSize(.small)
                 }
@@ -116,7 +119,7 @@ struct MainView: View {
     ) -> some View {
         let isActive = sourceManager.activeKind == kind
         return Button {
-            Task { try? await sourceManager.switchTo(kind) }
+            switchSource(kind)
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: icon)
@@ -154,11 +157,9 @@ struct MainView: View {
             }
             Spacer()
             Button("Browse…") { pickVideoFile() }.controlSize(.small)
-            Button("Use") {
-                Task { try? await sourceManager.switchTo(.videoFile) }
-            }
+            Button("Use") { switchSource(.videoFile) }
             .controlSize(.small)
-            .disabled(sourceManager.selectedFileURL == nil)
+            .disabled(sourceManager.selectedFileURL == nil || sourceManager.isSwitching)
         }
     }
 
@@ -178,11 +179,9 @@ struct MainView: View {
             }
             Spacer()
             Button("Browse…") { pickImageFile() }.controlSize(.small)
-            Button("Use") {
-                Task { try? await sourceManager.switchTo(.image) }
-            }
+            Button("Use") { switchSource(.image) }
             .controlSize(.small)
-            .disabled(sourceManager.selectedImageURL == nil)
+            .disabled(sourceManager.selectedImageURL == nil || sourceManager.isSwitching)
         }
     }
 
@@ -199,11 +198,9 @@ struct MainView: View {
                     .textFieldStyle(.roundedBorder)
                     .font(.caption)
             }
-            Button("Generate") {
-                Task { try? await sourceManager.switchTo(.qrCode) }
-            }
+            Button("Generate") { switchSource(.qrCode) }
             .controlSize(.small)
-            .disabled(sourceManager.qrPayload.trimmingCharacters(in: .whitespaces).isEmpty)
+            .disabled(sourceManager.qrPayload.trimmingCharacters(in: .whitespaces).isEmpty || sourceManager.isSwitching)
         }
     }
 
@@ -222,6 +219,7 @@ struct MainView: View {
             HStack(spacing: 16) {
                 diagnosticItem("XPC", state: xpcStateDescription, ok: xpcConnected)
                 diagnosticItem("Extension", state: extensionStatusLabel, ok: extensionController.state == .active)
+                diagnosticItem("Delivery", state: deliveryDescription, ok: xpc.framesRejected == 0)
             }
         }
         .padding(14)
@@ -295,6 +293,23 @@ struct MainView: View {
         return false
     }
 
+    private var frameCounterText: String {
+        var parts = ["Frames pushed: \(sourceManager.framesPushed)"]
+        if xpc.framesDropped > 0 { parts.append("dropped: \(xpc.framesDropped)") }
+        if xpc.framesRejected > 0 { parts.append("rejected: \(xpc.framesRejected)") }
+        return parts.joined(separator: " · ")
+    }
+
+    private var deliveryDescription: String {
+        if xpc.framesRejected > 0 {
+            return "\(xpc.framesRejected) rejected — no camera client streaming?"
+        }
+        if xpc.framesDropped > 0 {
+            return "\(xpc.framesDropped) dropped (extension busy)"
+        }
+        return "OK"
+    }
+
     private var xpcStateDescription: String {
         switch xpc.connectionState {
         case .disconnected: return "Disconnected"
@@ -305,6 +320,16 @@ struct MainView: View {
     }
 
     // MARK: - Actions
+
+    private func switchSource(_ kind: SimCamSourceKind) {
+        Task {
+            do {
+                try await sourceManager.switchTo(kind)
+            } catch {
+                // switchTo already surfaced the message via lastError; nothing to add.
+            }
+        }
+    }
 
     private func handleExtensionAction() {
         switch extensionController.state {
@@ -332,6 +357,7 @@ struct MainView: View {
     }
 
     private func runDiagnostics() {
+        extensionController.check()
         xpc.connect()
         xpc.ping()
     }

@@ -6,6 +6,10 @@
 //  app, exposes SimulatorCameraXPCProtocol. Each pushed frame is forwarded
 //  into the active CMIOExtensionStream via the provider's frame-injection hook.
 //
+//  Frames are injected on the XPC delivery queue directly — no hop through
+//  the main actor — so a busy UI thread in the extension can never stall
+//  the camera. Only the diagnostic counters live on the main actor.
+//
 
 import Foundation
 import CoreMedia
@@ -24,60 +28,59 @@ final class XPCListener: NSObject, NSXPCListenerDelegate {
     private var clients: [NSXPCConnection] = []
 
     /// Hook the provider source registers so we can deliver pushed frames
-    /// into the camera stream.
-    var onFrameReceived: ((SimCamFrame) -> Void)?
+    /// into the camera stream. Called on the XPC queue; returns whether the
+    /// frame was accepted.
+    nonisolated(unsafe) var onFrameReceived: ((SimCamFrame) -> Bool)?
+
+    /// Hook the provider calls when source switches; lets the device-source
+    /// know to stop generating its built-in test pattern when XPC takes over.
+    nonisolated(unsafe) var onSourceSwitched: ((SimCamSourceKind) -> Void)?
 
     /// Provider state — exposed via getStatus.
     var currentSourceKind: SimCamSourceKind = .testPattern
     var lastFrameTimestamp: Double = 0
     var isStreamRunning: Bool = false
-
-    /// Hook the provider calls when source switches; lets the device-source
-    /// know to stop generating its built-in test pattern when XPC takes over.
-    var onSourceSwitched: ((SimCamSourceKind) -> Void)?
+    var connectedClientCount: Int = 0
 
     private override init() {
-        self.listener = NSXPCListener(machServiceName: kSimCamMachServiceName)
+        self.listener = NSXPCListener(machServiceName: SimCamMachService.name)
         super.init()
         self.listener.delegate = self
     }
 
     func start() {
         listener.resume()
-        log.info("XPC listener started on \(kSimCamMachServiceName, privacy: .public)")
+        log.info("XPC listener started on \(SimCamMachService.name, privacy: .public)")
     }
 
     nonisolated func listener(
         _ listener: NSXPCListener,
         shouldAcceptNewConnection newConnection: NSXPCConnection
     ) -> Bool {
-        let interface = NSXPCInterface(with: SimulatorCameraXPCProtocol.self)
-        // Register the SimCamFrame + SimCamStatus secure-coding classes so the
-        // XPC machinery decodes them from the wire. NSSet → Set<AnyHashable>
-        // bridge is the only Swift-clean way to express this with class metadata.
-        let frameClasses = NSSet(array: [SimCamFrame.self, NSData.self]) as! Set<AnyHashable>
-        let statusClasses = NSSet(array: [SimCamStatus.self]) as! Set<AnyHashable>
-        interface.setClasses(
-            frameClasses,
-            for: #selector(SimulatorCameraXPCProtocol.pushFrame(_:withReply:)),
-            argumentIndex: 0,
-            ofReply: false
-        )
-        interface.setClasses(
-            statusClasses,
-            for: #selector(SimulatorCameraXPCProtocol.getStatus(withReply:)),
-            argumentIndex: 0,
-            ofReply: true
-        )
-        newConnection.exportedInterface = interface
-        let exported = XPCExportedObject(listener: self)
-        newConnection.exportedObject = exported
-        newConnection.invalidationHandler = { [weak self] in
+        // Only accept peers signed by the same team as this extension. Without
+        // this any local process could push frames into the virtual camera.
+        // Unsigned dev builds carry no team and therefore no gate.
+        if let requirement = SimCamCodeSigning.peerRequirement() {
+            do {
+                try newConnection.setCodeSigningRequirement(requirement)
+            } catch {
+                os_log(.error, "XPC: could not apply code-signing requirement: \(error.localizedDescription)")
+                return false
+            }
+        }
+
+        newConnection.exportedInterface = SimulatorCameraXPCInterface.make()
+        newConnection.exportedObject = XPCExportedObject(listener: self)
+        newConnection.invalidationHandler = { [weak self, weak newConnection] in
+            guard let newConnection else { return }
             Task { @MainActor [weak self] in
                 self?.removeClient(newConnection)
             }
         }
-        newConnection.interruptionHandler = { [weak self] in
+        // An interruption means the peer died; the connection object is
+        // finished for a listener, so treat it the same as invalidation.
+        newConnection.interruptionHandler = { [weak self, weak newConnection] in
+            guard let newConnection else { return }
             Task { @MainActor [weak self] in
                 self?.removeClient(newConnection)
             }
@@ -108,22 +111,30 @@ final class XPCListener: NSObject, NSXPCListenerDelegate {
     }
 
     func setSource(_ kindRaw: Int, withReply reply: @escaping (Bool) -> Void) {
-        let kind = SimCamSourceKind(rawValue: kindRaw) ?? .testPattern
-        Task { @MainActor [weak listener] in
-            guard let listener else { reply(false); return }
-            listener.currentSourceKind = kind
-            listener.onSourceSwitched?(kind)
-            reply(true)
+        guard let kind = SimCamSourceKind(rawValue: kindRaw) else {
+            reply(false)
+            return
         }
+        guard let listener else { reply(false); return }
+        listener.onSourceSwitched?(kind)
+        Task { @MainActor [weak listener] in
+            listener?.currentSourceKind = kind
+        }
+        reply(true)
     }
 
     func pushFrame(_ frame: SimCamFrame, withReply reply: @escaping (Bool) -> Void) {
-        Task { @MainActor [weak listener] in
-            guard let listener else { reply(false); return }
-            listener.lastFrameTimestamp = frame.timestampSeconds
-            listener.onFrameReceived?(frame)
-            reply(true)
+        guard let listener, let inject = listener.onFrameReceived else {
+            reply(false)
+            return
         }
+        let accepted = inject(frame)
+        if accepted {
+            Task { @MainActor [weak listener] in
+                listener?.lastFrameTimestamp = frame.timestampSeconds
+            }
+        }
+        reply(accepted)
     }
 
     func getStatus(withReply reply: @escaping (SimCamStatus) -> Void) {
@@ -139,7 +150,7 @@ final class XPCListener: NSObject, NSXPCListenerDelegate {
             }
             reply(SimCamStatus(
                 activeSourceKind: listener.currentSourceKind,
-                connectedClientCount: 0,  // populated by streamSource client list
+                connectedClientCount: listener.connectedClientCount,
                 lastFrameTimestampSeconds: listener.lastFrameTimestamp,
                 isStreamRunning: listener.isStreamRunning
             ))

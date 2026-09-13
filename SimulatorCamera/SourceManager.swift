@@ -6,6 +6,10 @@
 //  Manager: stops the old source, starts the new one, pipes frames to
 //  XPCClient.pushFrame, tells the extension via setSource.
 //
+//  Switches are serialized by a generation counter: if the user clicks
+//  twice while a camera is still warming up, the first start is discarded
+//  when it finally completes instead of leaking a running source.
+//
 
 import Foundation
 import OSLog
@@ -30,6 +34,7 @@ final class SourceManager {
     }
 
     private(set) var activeKind: SimCamSourceKind = .testPattern
+    private(set) var isSwitching = false
     private(set) var lastError: String?
     private(set) var framesPushed: Int = 0
     private(set) var lastFrameTimestamp: Double = 0
@@ -40,6 +45,7 @@ final class SourceManager {
     var qrPayload: String = "https://github.com/dautovri/SimulatorCamera"
 
     private var activeSource: FrameSource?
+    private var switchGeneration = 0
     private let xpc: XPCClient
     private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "source-manager")
 
@@ -48,22 +54,23 @@ final class SourceManager {
     }
 
     /// Switch to the given source kind. Throws on user-correctable issues
-    /// (no file selected, no QR payload). Returns immediately; the source
-    /// runs async until stop or another switch.
+    /// (no file selected, no QR payload) and on start failures. Returns
+    /// once the new source is running; it keeps running until stop() or
+    /// another switch.
     func switchTo(_ kind: SimCamSourceKind) async throws {
+        switchGeneration += 1
+        let generation = switchGeneration
+
         // Stop whatever's running.
-        activeSource?.stop()
-        activeSource = nil
-        framesPushed = 0
+        tearDownActiveSource()
         lastError = nil
 
-        // Tell the extension which source is active so the test-pattern timer
-        // gates correctly.
-        xpc.setSource(kind)
-        activeKind = kind
-
         // testPattern needs no container-side source.
-        if kind == .testPattern { return }
+        if kind == .testPattern {
+            xpc.setSource(.testPattern)
+            activeKind = .testPattern
+            return
+        }
 
         // Build the new source.
         let source: FrameSource
@@ -84,36 +91,62 @@ final class SourceManager {
             source = QRSource(payload: payload)
         }
 
-        // Wire frame hook to XPC pump. Capture-queue thread is fine; XPCClient
-        // serializes into NSXPCConnection internally.
+        // Frames go straight to XPC from the producer's thread; only the
+        // counters hop to the main actor.
+        let xpc = self.xpc
         source.onFrame = { [weak self] frame in
-            // Hop to main actor for state mutation only; the push itself is
-            // fire-and-forget XPC.
+            xpc.pushFrame(frame)
             Task { @MainActor [weak self] in
-                self?.xpc.pushFrame(frame)
-                self?.framesPushed += 1
-                self?.lastFrameTimestamp = frame.timestampSeconds
+                guard let self, self.switchGeneration == generation else { return }
+                self.framesPushed += 1
+                self.lastFrameTimestamp = frame.timestampSeconds
             }
         }
 
+        isSwitching = true
+        defer { if switchGeneration == generation { isSwitching = false } }
+
         do {
             try await source.start()
-            activeSource = source
-            log.info("source switched to \(String(describing: kind), privacy: .public)")
         } catch {
-            lastError = error.localizedDescription
-            // Roll back to test pattern.
-            xpc.setSource(.testPattern)
-            activeKind = .testPattern
+            // A newer switch may already own the UI; only report if we're current.
+            if switchGeneration == generation {
+                lastError = error.localizedDescription
+                xpc.setSource(.testPattern)
+                activeKind = .testPattern
+            }
             throw SwitchError.startFailed(error.localizedDescription)
         }
+
+        // Lost the race to a newer switch while starting: discard quietly.
+        guard switchGeneration == generation else {
+            source.stop()
+            return
+        }
+
+        activeSource = source
+        activeKind = kind
+        framesPushed = 0
+        xpc.resetCounters()
+        // Tell the extension only once frames are actually flowing, so the
+        // test pattern keeps running during a slow camera warm-up instead
+        // of freezing the virtual camera.
+        xpc.setSource(kind)
+        log.info("source switched to \(kind.label, privacy: .public)")
     }
 
     func stop() {
-        activeSource?.stop()
-        activeSource = nil
+        switchGeneration += 1
+        tearDownActiveSource()
         xpc.setSource(.testPattern)
         activeKind = .testPattern
+        isSwitching = false
+    }
+
+    private func tearDownActiveSource() {
+        activeSource?.onFrame = nil
+        activeSource?.stop()
+        activeSource = nil
         framesPushed = 0
     }
 }

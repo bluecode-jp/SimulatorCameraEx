@@ -73,7 +73,9 @@ cat <<'EOF'
 
 ---------------------------------------------------------------
 Next manual steps:
-  1. Run any camera app on the Simulator (Xcode 16+ required).
+  1. Run any camera app on the Simulator (Xcode 16+ required). The
+     extension only reports "stream running: yes" while such a client
+     is actually capturing from the virtual camera.
   2. AVCaptureDevice.default(for: .video) should return
      "SimulatorCamera Virtual" and deliver the QR frame pushed above.
 
