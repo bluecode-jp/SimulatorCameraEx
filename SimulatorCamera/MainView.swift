@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 
 struct MainView: View {
     @Environment(ExtensionController.self) private var extensionController
-    @Environment(XPCClient.self) private var xpc
+    @Environment(CameraLink.self) private var link
     @Environment(SourceManager.self) private var sourceManager
 
     var body: some View {
@@ -217,9 +217,10 @@ struct MainView: View {
                 .controlSize(.small)
             }
             HStack(spacing: 16) {
-                diagnosticItem("XPC", state: xpcStateDescription, ok: xpcConnected)
                 diagnosticItem("Extension", state: extensionStatusLabel, ok: extensionController.state == .active)
-                diagnosticItem("Delivery", state: deliveryDescription, ok: xpc.framesRejected == 0)
+                diagnosticItem("Camera link", state: linkStateDescription, ok: link.isConnected)
+                diagnosticItem("Capture", state: captureDescription, ok: link.extensionStatus?.isStreamRunning == true)
+                diagnosticItem("Delivery", state: deliveryDescription, ok: link.framesRejected == 0)
             }
         }
         .padding(14)
@@ -240,7 +241,7 @@ struct MainView: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Once active, the iOS Simulator sees 'SimulatorCamera Virtual'")
+            Text("Once active, the iOS Simulator sees '\(kSimCamDeviceName)'")
                 .font(.caption.bold())
             Text("AVCaptureDevice.default(for: .video) returns it. Existing camera code Just Works.")
                 .font(.caption)
@@ -288,33 +289,42 @@ struct MainView: View {
         }
     }
 
-    private var xpcConnected: Bool {
-        if case .connected = xpc.connectionState { return true }
-        return false
-    }
-
     private var frameCounterText: String {
         var parts = ["Frames pushed: \(sourceManager.framesPushed)"]
-        if xpc.framesDropped > 0 { parts.append("dropped: \(xpc.framesDropped)") }
-        if xpc.framesRejected > 0 { parts.append("rejected: \(xpc.framesRejected)") }
+        if link.framesDropped > 0 { parts.append("dropped: \(link.framesDropped)") }
+        if link.framesRejected > 0 { parts.append("rejected: \(link.framesRejected)") }
+        if let received = link.extensionStatus?.framesReceived, received > 0 {
+            parts.append("received by extension: \(received)")
+        }
         return parts.joined(separator: " · ")
     }
 
     private var deliveryDescription: String {
-        if xpc.framesRejected > 0 {
-            return "\(xpc.framesRejected) rejected — no camera client streaming?"
+        if link.framesRejected > 0 {
+            return "\(link.framesRejected) rejected — sink not open?"
         }
-        if xpc.framesDropped > 0 {
-            return "\(xpc.framesDropped) dropped (extension busy)"
+        if link.framesDropped > 0 {
+            return "\(link.framesDropped) dropped (extension busy)"
+        }
+        if let rejected = link.extensionStatus?.framesRejected, rejected > 0 {
+            return "extension rejected \(rejected)"
         }
         return "OK"
     }
 
-    private var xpcStateDescription: String {
-        switch xpc.connectionState {
+    private var captureDescription: String {
+        guard let status = link.extensionStatus else { return "Unknown" }
+        if status.isStreamRunning {
+            return "\(status.connectedClientCount) client(s) capturing"
+        }
+        return "No app is capturing from the virtual camera"
+    }
+
+    private var linkStateDescription: String {
+        switch link.connectionState {
         case .disconnected: return "Disconnected"
-        case .connecting: return "Connecting…"
-        case .connected: return "Connected (pid \(xpc.lastPingPid))"
+        case .searching: return "Looking for the virtual camera…"
+        case .connected: return "Connected"
         case .failed(let m): return "Failed: \(m)"
         }
     }
@@ -358,7 +368,7 @@ struct MainView: View {
 
     private func runDiagnostics() {
         extensionController.check()
-        xpc.connect()
-        xpc.ping()
+        link.connect()
+        link.refreshStatus()
     }
 }

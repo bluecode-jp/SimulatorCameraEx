@@ -7,56 +7,64 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+- **Frame transport rewritten on CoreMediaIO sink streams.** The v1.0.0 design
+  pushed frames into the camera extension over a private `NSXPCListener`.
+  Apple DTS classes that as unsupported (the extension runs as the
+  `_cmiodalassistants` role user, so the app's Mach lookup never reaches it),
+  and it never worked end-to-end. The extension now publishes a sink stream
+  (`SimulatorCamera.Video.Sink`) next to the camera stream; the app and
+  `simcamctl` open it through the CoreMediaIO C API and enqueue IOSurface-
+  backed `CMSampleBuffer`s, which the extension re-sends on the camera stream
+  without copying pixels. Control (source kind, status) travels as custom
+  properties on the camera stream. `Shared/XPCContract.swift`,
+  `XPCListener.swift` and `XPCClient.swift` are gone; `Shared/CameraContract.swift`,
+  `Shared/CMIOSinkClient.swift` and `SimulatorCamera/CameraLink.swift` replace them.
+- Virtual camera format is 1280x720 BGRA @ 30 fps (was 1920x1080 @ 60 with
+  1280x720 payloads that never rendered). Every source is normalized to that
+  geometry once, with a shared `CIContext` and pixel-buffer pool.
+- Image, QR and simcamctl share one rasterizer (`FrameRaster`, `QRRenderer`)
+  that draws straight into IOSurface-backed pixel buffers.
+- `simcamctl status` shows sink state and the extension's received / rejected
+  frame counters; `ping` confirms the device and its properties are reachable.
+  Exit code 2 now means "virtual camera not registered".
+- The container app declares `com.apple.security.device.camera` (needed to
+  start a CMIO stream from the sandbox).
+
 ### Fixed
-- **Extension no longer crashes on malformed frames.** `SimCamFrame` is validated
-  on decode and again before any byte is copied (dimensions, stride, payload
-  length, pixel format, finite timestamp). Previously a short payload or a
-  negative height was an out-of-bounds `memcpy` / integer trap inside the
-  camera extension.
-- **Injected frames now match the advertised format.** The extension advertised
-  1920x1080@60 but every container source produced 1280x720, so
-  `CMSampleBufferCreateForImageBuffer` failed for each pushed frame. The whole
-  pipeline now uses one canonical geometry (`kSimCamFrameWidth/Height/Rate`)
-  and the extension rejects anything else with a clear log line.
 - **Test-pattern timer leak.** Each CMIO client that started streaming created
   a new timer without cancelling the previous one; orphaned timers kept emitting
   at full rate forever. Only the first client creates the timer now.
-- **Host-clock timestamps.** Pushed frames were stamped with source-relative
-  seconds (often near zero, sometimes negative → `UInt64` trap). The extension
-  now stamps every outgoing sample with the host clock.
-- **Mach service name is app-group scoped.** `<TeamID>.com.dautov.SimulatorCamera.xpc`
-  (derived from the running binary's code signature) instead of a bare name the
-  sandbox would refuse to look up.
-- **XPC client recovers on its own.** Interruptions re-ping and invalidations
-  reconnect with capped backoff instead of dropping the connection until the
-  user clicks "Run Diagnostics". Frames are dropped, not queued, when more than
-  two are in flight so a slow extension can't balloon memory.
+- **Host-clock timestamps.** Frames are stamped with the host clock on both
+  sides; source-relative (sometimes negative) seconds no longer reach
+  `UInt64` conversions.
+- **Extension never stalls the consumer.** With a producer selected but quiet
+  the last frame is re-sent with fresh timestamps; with none delivered yet the
+  stripe pattern shows. Frames that arrive while the test pattern is selected
+  are consumed and ignored, so a stray producer cannot override the choice.
+- **Sink producers are gated** to binaries whose signing ID matches the
+  extension's own bundle-ID prefix (`…SimulatorCamera`, `…simcamctl`).
 - **Source switching is race-free.** Rapid switches are serialized by a
   generation counter; a camera that finishes warming up after a newer switch is
-  stopped instead of leaking. The extension is told about the new source only
-  once frames are actually flowing.
-- **Video file source** cancels its reader on stop, stops instead of spinning on
-  unreadable files, clamps negative PTS, and paces against the wall clock.
-- **Mac camera source** honours a `stop()` that lands while the session is still
-  starting, so the camera light always goes off.
-- `simcamctl status` now reports real `stream running` and `connected clients`
-  values; every CLI round-trip has a 5 s timeout.
+  stopped instead of leaking. The sink is opened before the producer starts and
+  the extension learns the new source only once frames are flowing.
+- **Camera link recovers on its own.** Device discovery retries with capped
+  backoff and re-attaches on `AVCaptureDevice.wasConnectedNotification` (which
+  fires when the extension registers). Status is polled once a second.
+- **Video file source** cancels its reader on stop, stops instead of spinning
+  on unreadable files, clamps negative PTS, and paces against the wall clock.
+- **Mac camera source** honours a `stop()` that lands while the session is
+  still starting, and never selects the virtual camera as its own input.
 - Extension state is queried at launch (`propertiesRequest`) so a relaunched
   app shows "Active" instead of "Not checked". Leftover activation diagnostics
   that wrote files into `~/Library/Logs` are gone.
 
 ### Added
-- The extension only accepts XPC peers signed by the same team as itself
-  (`setCodeSigningRequirement`). Unsigned dev builds are unaffected.
-- `SimulatorCameraTests`: 19 logic tests for the wire contract, secure-coding
-  round trips, raster helpers and QR rendering. CI runs them.
-- Delivery counters in the UI (frames dropped / rejected) to tell "no camera
-  client is streaming" apart from "the extension is busy".
-
-### Changed
-- Virtual camera format is 1280x720 BGRA @ 30 fps (was 1920x1080 @ 60 with
-  1280x720 payloads that never rendered).
-- Image, QR and simcamctl share one rasterizer (`FrameRaster`, `QRRenderer`).
+- `SimulatorCameraTests`: 20 logic tests for the contract, status encoding,
+  frame validation, sink-client edge cases, raster helpers and QR rendering.
+  CI runs them.
+- Diagnostics in the UI: camera-link state, whether any app is capturing from
+  the virtual camera, and frames dropped / rejected on both sides.
 
 ## [1.0.0] — 2026-04-26
 

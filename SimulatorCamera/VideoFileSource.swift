@@ -18,7 +18,7 @@ import OSLog
 final class VideoFileSource: FrameSource {
 
     let kind: SimCamSourceKind = .videoFile
-    var onFrame: ((SimCamFrame) -> Void)?
+    var onFrame: ((CVPixelBuffer) -> Void)?
 
     private let url: URL
     private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "video-file")
@@ -77,7 +77,6 @@ final class VideoFileSource: FrameSource {
 
     private func runLoop(_ track: Track) async {
         var loopCount = 0
-        var loopOffset: Double = 0
         var consecutiveEmptyPasses = 0
 
         while !Task.isCancelled {
@@ -93,6 +92,7 @@ final class VideoFileSource: FrameSource {
                 track: track.track,
                 outputSettings: [
                     kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                    kCVPixelBufferIOSurfacePropertiesKey as String: [:] as [String: Any],
                 ]
             )
             output.alwaysCopiesSampleData = false
@@ -110,7 +110,6 @@ final class VideoFileSource: FrameSource {
             defer { reader.cancelReading() }
 
             var framesThisPass = 0
-            var lastPTS: Double = 0
             let passStart = ContinuousClock.now
 
             while !Task.isCancelled, reader.status == .reading {
@@ -118,14 +117,9 @@ final class VideoFileSource: FrameSource {
                 guard let pb = CMSampleBufferGetImageBuffer(sb) else { continue }
 
                 let pts = max(0, CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sb)))
-                lastPTS = pts
                 framesThisPass += 1
 
-                if let frame = normalizer.makeFrame(
-                    from: pb,
-                    transform: track.transform,
-                    timestamp: loopOffset + pts
-                ) {
+                if let frame = normalizer.canonicalize(pb, transform: track.transform) {
                     onFrame?(frame)
                 }
 
@@ -159,9 +153,6 @@ final class VideoFileSource: FrameSource {
                 continue
             }
             consecutiveEmptyPasses = 0
-
-            // EOF — bump loop offset for monotonic timestamps and restart.
-            loopOffset += lastPTS + track.frameInterval
             loopCount += 1
             log.info("video EOF, looping (count=\(loopCount))")
         }

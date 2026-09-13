@@ -4,7 +4,7 @@
 //
 //  Owns the active FrameSource. UI calls switchTo(.macCamera, ...) etc.
 //  Manager: stops the old source, starts the new one, pipes frames to
-//  XPCClient.pushFrame, tells the extension via setSource.
+//  CameraLink.pushFrame, tells the extension which source is live.
 //
 //  Switches are serialized by a generation counter: if the user clicks
 //  twice while a camera is still warming up, the first start is discarded
@@ -12,6 +12,7 @@
 //
 
 import Foundation
+import CoreVideo
 import OSLog
 import Observation
 
@@ -37,7 +38,6 @@ final class SourceManager {
     private(set) var isSwitching = false
     private(set) var lastError: String?
     private(set) var framesPushed: Int = 0
-    private(set) var lastFrameTimestamp: Double = 0
 
     /// User input fields the UI binds to.
     var selectedFileURL: URL?
@@ -46,11 +46,11 @@ final class SourceManager {
 
     private var activeSource: FrameSource?
     private var switchGeneration = 0
-    private let xpc: XPCClient
+    private let link: CameraLink
     private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "source-manager")
 
-    init(xpc: XPCClient) {
-        self.xpc = xpc
+    init(link: CameraLink) {
+        self.link = link
     }
 
     /// Switch to the given source kind. Throws on user-correctable issues
@@ -67,8 +67,7 @@ final class SourceManager {
 
         // testPattern needs no container-side source.
         if kind == .testPattern {
-            xpc.setSource(.testPattern)
-            activeKind = .testPattern
+            declare(.testPattern)
             return
         }
 
@@ -91,20 +90,40 @@ final class SourceManager {
             source = QRSource(payload: payload)
         }
 
-        // Frames go straight to XPC from the producer's thread; only the
-        // counters hop to the main actor.
-        let xpc = self.xpc
-        source.onFrame = { [weak self] frame in
-            xpc.pushFrame(frame)
-            Task { @MainActor [weak self] in
-                guard let self, self.switchGeneration == generation else { return }
-                self.framesPushed += 1
-                self.lastFrameTimestamp = frame.timestampSeconds
-            }
-        }
-
         isSwitching = true
         defer { if switchGeneration == generation { isSwitching = false } }
+
+        // The sink needs camera access (TCC gates CMIO device streams).
+        guard await link.requestCameraAccessIfNeeded() else {
+            lastError = FrameSourceError.permissionDenied.localizedDescription
+            throw SwitchError.startFailed(lastError ?? "camera access denied")
+        }
+
+        // Open the sink before the producer starts so its first frames have
+        // somewhere to go. The extension keeps showing the test pattern
+        // until we declare the new kind below.
+        do {
+            try link.openSink()
+        } catch {
+            lastError = "Extension not reachable: \(error.localizedDescription)"
+            throw SwitchError.startFailed(lastError ?? error.localizedDescription)
+        }
+
+        // Frames go straight to the sink from the producer's thread; only
+        // the counter hops to the main actor, and only every few frames.
+        let link = self.link
+        var localCount = 0
+        source.onFrame = { [weak self] frame in
+            link.pushFrame(frame)
+            localCount += 1
+            if localCount % 10 == 0 {
+                let count = localCount
+                Task { @MainActor [weak self] in
+                    guard let self, self.switchGeneration == generation else { return }
+                    self.framesPushed = count
+                }
+            }
+        }
 
         do {
             try await source.start()
@@ -112,8 +131,7 @@ final class SourceManager {
             // A newer switch may already own the UI; only report if we're current.
             if switchGeneration == generation {
                 lastError = error.localizedDescription
-                xpc.setSource(.testPattern)
-                activeKind = .testPattern
+                declare(.testPattern)
             }
             throw SwitchError.startFailed(error.localizedDescription)
         }
@@ -127,20 +145,30 @@ final class SourceManager {
         activeSource = source
         activeKind = kind
         framesPushed = 0
-        xpc.resetCounters()
         // Tell the extension only once frames are actually flowing, so the
         // test pattern keeps running during a slow camera warm-up instead
         // of freezing the virtual camera.
-        xpc.setSource(kind)
+        declare(kind)
         log.info("source switched to \(kind.label, privacy: .public)")
     }
 
     func stop() {
         switchGeneration += 1
         tearDownActiveSource()
-        xpc.setSource(.testPattern)
-        activeKind = .testPattern
+        declare(.testPattern)
         isSwitching = false
+    }
+
+    /// Tell the extension which source is live; failures are surfaced in
+    /// the UI but do not stop the local source (the link retries on its own).
+    private func declare(_ kind: SimCamSourceKind) {
+        activeKind = kind
+        do {
+            try link.setSource(kind)
+        } catch {
+            lastError = "Extension not reachable: \(error.localizedDescription)"
+            log.error("setSource failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     private func tearDownActiveSource() {

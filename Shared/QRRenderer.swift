@@ -10,12 +10,13 @@ import Foundation
 import CoreGraphics
 import CoreImage
 import CoreImage.CIFilterBuiltins
+import CoreVideo
 
 public enum QRRenderer {
     public static let qrSide: CGFloat = 600
 
     /// Nil when Core Image cannot encode the payload (empty or too long).
-    public static func render(payload: String) -> Data? {
+    public static func render(payload: String) -> CVPixelBuffer? {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(payload.utf8)
         filter.correctionLevel = "M"

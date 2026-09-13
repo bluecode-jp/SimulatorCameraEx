@@ -3,7 +3,7 @@
 //  SimulatorCamera
 //
 //  AVCaptureSession against the Mac's built-in (or external) camera.
-//  Captures BGRA frames and forwards them to the SourceManager → XPC.
+//  Captures BGRA frames and forwards them to the SourceManager → sink.
 //
 //  v1.0 picks default camera (Mac built-in webcam or first external).
 //  v1.1 adds device picker, front/back equivalent, resolution control.
@@ -18,7 +18,7 @@ import OSLog
 final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSampleBufferDelegate {
 
     let kind: SimCamSourceKind = .macCamera
-    var onFrame: ((SimCamFrame) -> Void)?
+    var onFrame: ((CVPixelBuffer) -> Void)?
 
     private let session = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "com.dautov.SimulatorCamera.maccamera.session")
@@ -69,7 +69,15 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
             session.sessionPreset = .hd1280x720
         }
 
-        guard let device = AVCaptureDevice.default(for: .video) else {
+        // Never pick our own virtual camera as the input: that would feed the
+        // extension its own output in a loop.
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera, .external, .continuityCamera],
+            mediaType: .video,
+            position: .unspecified
+        )
+        let candidates = discovery.devices.filter { $0.localizedName != kSimCamDeviceName }
+        guard let device = candidates.first(where: { $0.deviceType == .builtInWideAngleCamera }) ?? candidates.first else {
             throw FrameSourceError.noDevice
         }
 
@@ -127,10 +135,8 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
         didOutput sampleBuffer: CMSampleBuffer,
         from connection: AVCaptureConnection
     ) {
-        guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        let pts = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-        let timestamp = CMTimeGetSeconds(pts)
-        guard let frame = normalizer.makeFrame(from: pb, timestamp: timestamp) else { return }
+        guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer),
+              let frame = normalizer.canonicalize(pb) else { return }
         onFrame?(frame)
     }
 }

@@ -3,12 +3,13 @@
 //  SimulatorCamera shared
 //
 //  CPU rasterizer for the static sources (image, QR) and simcamctl: draws
-//  into a canonical 1280x720 BGRA bitmap and hands back the bytes as Data.
-//  One implementation instead of three copies of the same CGContext dance.
+//  straight into an IOSurface-backed canonical 1280x720 BGRA pixel buffer
+//  that can be enqueued on the extension's sink stream without a copy.
 //
 
 import Foundation
 import CoreGraphics
+import CoreMedia
 import CoreVideo
 
 public enum FrameRaster {
@@ -30,36 +31,69 @@ public enum FrameRaster {
         return CGRect(x: (bounds.width - w) / 2, y: (bounds.height - h) / 2, width: w, height: h)
     }
 
-    /// Render a canonical BGRA frame. `draw` receives a context already
-    /// filled with `background`; origin is bottom-left (CoreGraphics).
+    /// Pixel-buffer attributes every canonical buffer is created with.
+    public static var pixelBufferAttributes: [CFString: Any] {
+        [
+            kCVPixelBufferWidthKey: kSimCamFrameWidth,
+            kCVPixelBufferHeightKey: kSimCamFrameHeight,
+            kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary,
+            kCVPixelBufferCGBitmapContextCompatibilityKey: true,
+        ]
+    }
+
+    /// A fresh, IOSurface-backed canonical pixel buffer.
+    public static func makePixelBuffer() -> CVPixelBuffer? {
+        var pb: CVPixelBuffer?
+        let status = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            kSimCamFrameWidth,
+            kSimCamFrameHeight,
+            kCVPixelFormatType_32BGRA,
+            pixelBufferAttributes as CFDictionary,
+            &pb
+        )
+        return status == kCVReturnSuccess ? pb : nil
+    }
+
+    /// A pool of canonical pixel buffers for sources that emit continuously.
+    public static func makePool() -> CVPixelBufferPool? {
+        var pool: CVPixelBufferPool?
+        CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, pixelBufferAttributes as CFDictionary, &pool)
+        return pool
+    }
+
+    /// Render a canonical frame. `draw` receives a context already filled
+    /// with `background`; origin is bottom-left (CoreGraphics).
     public static func render(
         background: CGColor,
         draw: (CGContext) -> Void
-    ) -> Data? {
-        let width = kSimCamFrameWidth
-        let height = kSimCamFrameHeight
+    ) -> CVPixelBuffer? {
+        guard let pb = makePixelBuffer() else { return nil }
+        CVPixelBufferLockBaseAddress(pb, [])
+        defer { CVPixelBufferUnlockBaseAddress(pb, []) }
+        guard let base = CVPixelBufferGetBaseAddress(pb) else { return nil }
         let bitmapInfo = CGImageAlphaInfo.noneSkipFirst.rawValue
             | CGBitmapInfo.byteOrder32Little.rawValue
         guard let ctx = CGContext(
-            data: nil,
-            width: width,
-            height: height,
+            data: base,
+            width: kSimCamFrameWidth,
+            height: kSimCamFrameHeight,
             bitsPerComponent: 8,
-            bytesPerRow: bytesPerRow,
+            bytesPerRow: CVPixelBufferGetBytesPerRow(pb),
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: bitmapInfo
         ) else {
             return nil
         }
         ctx.setFillColor(background)
-        ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        ctx.fill(CGRect(x: 0, y: 0, width: kSimCamFrameWidth, height: kSimCamFrameHeight))
         draw(ctx)
-        guard let base = ctx.data else { return nil }
-        return Data(bytes: base, count: bytesPerRow * height)
+        return pb
     }
 
-    /// Aspect-fit `image` on `background` and return the canonical frame bytes.
-    public static func render(image: CGImage, background: CGColor) -> Data? {
+    /// Aspect-fit `image` on `background` into a canonical pixel buffer.
+    public static func render(image: CGImage, background: CGColor) -> CVPixelBuffer? {
         render(background: background) { ctx in
             let rect = aspectFitRect(for: CGSize(width: image.width, height: image.height))
             ctx.interpolationQuality = .high
@@ -67,14 +101,36 @@ public enum FrameRaster {
         }
     }
 
-    /// Wrap canonical frame bytes in a SimCamFrame.
-    public static func makeFrame(bytes: Data, timestamp: Double) -> SimCamFrame {
-        SimCamFrame(
-            width: kSimCamFrameWidth,
-            height: kSimCamFrameHeight,
-            bytesPerRow: bytesPerRow,
-            timestampSeconds: timestamp,
-            bgraData: bytes
+    /// Wrap a canonical pixel buffer in a host-clock-stamped CMSampleBuffer,
+    /// the shape the sink stream expects. `formatDescription` is created
+    /// from the buffer so it always matches.
+    public static func makeSampleBuffer(_ pixelBuffer: CVPixelBuffer) -> CMSampleBuffer? {
+        var format: CMFormatDescription?
+        guard CMVideoFormatDescriptionCreateForImageBuffer(
+            allocator: kCFAllocatorDefault,
+            imageBuffer: pixelBuffer,
+            formatDescriptionOut: &format
+        ) == noErr, let format else {
+            return nil
+        }
+        var timing = CMSampleTimingInfo(
+            duration: CMTime(value: 1, timescale: Int32(kSimCamFrameRate)),
+            presentationTimeStamp: CMClockGetTime(CMClockGetHostTimeClock()),
+            decodeTimeStamp: .invalid
         )
+        var sample: CMSampleBuffer?
+        guard CMSampleBufferCreateForImageBuffer(
+            allocator: kCFAllocatorDefault,
+            imageBuffer: pixelBuffer,
+            dataReady: true,
+            makeDataReadyCallback: nil,
+            refcon: nil,
+            formatDescription: format,
+            sampleTiming: &timing,
+            sampleBufferOut: &sample
+        ) == noErr else {
+            return nil
+        }
+        return sample
     }
 }

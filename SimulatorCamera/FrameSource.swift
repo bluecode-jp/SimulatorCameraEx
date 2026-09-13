@@ -4,12 +4,12 @@
 //
 //  Common shape for everything that produces frames in the container app:
 //  Mac camera, video file, static image, QR generator. SourceManager owns
-//  the active one and pumps its frames into XPCClient.
+//  the active one and pumps its frames into CameraLink.
 //
-//  Every source hands the manager a canonical 1280x720 BGRA frame; the
-//  FrameNormalizer below does the letterboxing / rotation / format
-//  conversion once, with a reusable CIContext and pixel-buffer pool,
-//  instead of each source improvising its own conversion per frame.
+//  Every source hands the manager a canonical 1280x720 BGRA, IOSurface-
+//  backed CVPixelBuffer; the FrameNormalizer below does the letterboxing /
+//  rotation / format conversion once, with a reusable CIContext and
+//  pixel-buffer pool, instead of each source improvising its own conversion.
 //
 
 import Foundation
@@ -19,7 +19,7 @@ import CoreMedia
 import CoreVideo
 
 protocol FrameSource: AnyObject {
-    /// Kind reported to the extension via XPC setSource.
+    /// Kind reported to the extension.
     var kind: SimCamSourceKind { get }
 
     /// Start producing frames. Throw if hardware/file fails to open.
@@ -28,8 +28,9 @@ protocol FrameSource: AnyObject {
     /// Stop producing frames. Idempotent.
     func stop()
 
-    /// Hook the SourceManager registers. Called on a background queue.
-    var onFrame: ((SimCamFrame) -> Void)? { get set }
+    /// Hook the SourceManager registers. Called on a background queue with
+    /// a canonical pixel buffer.
+    var onFrame: ((CVPixelBuffer) -> Void)? { get set }
 }
 
 /// Errors a source can throw on start.
@@ -47,7 +48,7 @@ enum FrameSourceError: LocalizedError {
     }
 }
 
-/// Converts arbitrary pixel buffers into canonical SimCamFrames.
+/// Converts arbitrary pixel buffers into canonical ones.
 ///
 /// Thread-safety: one instance per source; sources call it from a single
 /// capture / decode thread. CIContext and CVPixelBufferPool are themselves
@@ -55,44 +56,26 @@ enum FrameSourceError: LocalizedError {
 final class FrameNormalizer {
 
     private let context = CIContext(options: [.cacheIntermediates: false])
-    private let pool: CVPixelBufferPool?
+    private let pool = FrameRaster.makePool()
     private let canonicalExtent = CGRect(
         x: 0, y: 0,
         width: kSimCamFrameWidth, height: kSimCamFrameHeight
     )
 
-    init() {
-        var pool: CVPixelBufferPool?
-        let attrs: NSDictionary = [
-            kCVPixelBufferWidthKey: kSimCamFrameWidth,
-            kCVPixelBufferHeightKey: kSimCamFrameHeight,
-            kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,
-            kCVPixelBufferIOSurfacePropertiesKey: [:] as NSDictionary,
-        ]
-        CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, attrs, &pool)
-        self.pool = pool
-    }
-
-    /// Produce a canonical frame from `pixelBuffer`. `transform` is applied
-    /// first (video preferredTransform); the result is aspect-fit onto a
-    /// black canonical canvas. Already-canonical BGRA buffers take a fast
-    /// memcpy path.
-    func makeFrame(
-        from pixelBuffer: CVPixelBuffer,
-        transform: CGAffineTransform = .identity,
-        timestamp: Double
-    ) -> SimCamFrame? {
-        let width = CVPixelBufferGetWidth(pixelBuffer)
-        let height = CVPixelBufferGetHeight(pixelBuffer)
-        let format = CVPixelBufferGetPixelFormatType(pixelBuffer)
-
-        if transform.isIdentity,
-           format == kCVPixelFormatType_32BGRA,
-           width == kSimCamFrameWidth,
-           height == kSimCamFrameHeight {
-            return copyOut(pixelBuffer, timestamp: timestamp)
+    /// Return a canonical pixel buffer for `pixelBuffer`. `transform` is
+    /// applied first (video preferredTransform); the result is aspect-fit
+    /// onto a black canonical canvas. Already-canonical BGRA buffers are
+    /// returned as-is (zero copy).
+    func canonicalize(
+        _ pixelBuffer: CVPixelBuffer,
+        transform: CGAffineTransform = .identity
+    ) -> CVPixelBuffer? {
+        if transform.isIdentity, SimCamFrameCheck.problem(with: pixelBuffer) == nil {
+            return pixelBuffer
         }
 
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
         guard width > 0, height > 0 else { return nil }
 
         var image = CIImage(cvPixelBuffer: pixelBuffer)
@@ -125,7 +108,7 @@ final class FrameNormalizer {
             bounds: canonicalExtent,
             colorSpace: CGColorSpaceCreateDeviceRGB()
         )
-        return copyOut(dst, timestamp: timestamp)
+        return dst
     }
 
     private func dequeue() -> CVPixelBuffer? {
@@ -133,21 +116,5 @@ final class FrameNormalizer {
         var pb: CVPixelBuffer?
         let status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pb)
         return status == kCVReturnSuccess ? pb : nil
-    }
-
-    private func copyOut(_ pixelBuffer: CVPixelBuffer, timestamp: Double) -> SimCamFrame? {
-        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
-        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
-        guard let base = CVPixelBufferGetBaseAddress(pixelBuffer) else { return nil }
-        let rowBytes = CVPixelBufferGetBytesPerRow(pixelBuffer)
-        let height = CVPixelBufferGetHeight(pixelBuffer)
-        let data = Data(bytes: base, count: rowBytes * height)
-        return SimCamFrame(
-            width: CVPixelBufferGetWidth(pixelBuffer),
-            height: height,
-            bytesPerRow: rowBytes,
-            timestampSeconds: timestamp,
-            bgraData: data
-        )
     }
 }

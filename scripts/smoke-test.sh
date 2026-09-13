@@ -54,6 +54,7 @@ if [[ -x "$SIMCAMCTL" ]]; then
     "$SIMCAMCTL" ping || warn "Extension not responding — is it activated?"
 
     say "simcamctl set-source --qr (smoke fixture)"
+    warn "Opening the sink stream may prompt for camera access for this terminal."
     "$SIMCAMCTL" set-source --qr "https://example.com/smoke-test" || \
         warn "Could not push QR source."
 
