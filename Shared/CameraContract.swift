@@ -46,6 +46,11 @@ public let kSimCamSinkQueueDepth: Int = 4
 /// apps running SimCamInject.dylib (see SimulatorFeed.swift).
 public let kSimCamFeedPort: UInt16 = 47847
 
+/// Loopback TCP port the container app takes commands on (ControlServer.swift):
+/// one JSON object per line in, one per line out. simcamctl uses it so that
+/// `set-source` reaches iOS Simulator apps as well as the CMIO extension.
+public let kSimCamControlPort: UInt16 = 47848
+
 // MARK: - Custom properties
 
 /// Custom CMIO properties the extension exposes on its *source* stream.

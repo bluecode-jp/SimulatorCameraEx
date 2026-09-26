@@ -94,6 +94,28 @@ final class SimCamCLIClient {
 
     // MARK: - Helpers
 
+    /// framesReceived as a separate simcamctl process sees it right now.
+    private static func freshFramesReceived() -> Int? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+        process.arguments = ["__frames-received"]
+        let out = Pipe()
+        process.standardOutput = out
+        process.standardError = FileHandle.nullDevice
+        guard (try? process.run()) != nil else { return nil }
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return Int(String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    /// Hidden helper for freshFramesReceived(): print the counter and exit.
+    func runPrintFramesReceived() -> Never {
+        attach()
+        guard let status = try? client.readStatus() else { exit(2) }
+        print(status.framesReceived)
+        exit(0)
+    }
+
     /// Switch the extension to `kind`, open the sink, push one frame, and
     /// wait until the extension reports it. The extension keeps re-sending
     /// the last frame after the sink closes, so a single push is enough for
@@ -110,12 +132,11 @@ final class SimCamCLIClient {
         }
         defer { client.closeSink() }
 
-        // Re-enqueue until the extension's received counter moves or we time
-        // out. The first buffers may be consumed before a capture client is
-        // streaming, in which case the extension still holds the frame.
-        let deadline = Date().addingTimeInterval(5)
-        var received = false
-        while Date() < deadline {
+        // Push for about a second, then confirm through a fresh process: the
+        // extension never posts property-changed notifications for the
+        // status, so within this process CoreMediaIO keeps returning the
+        // value read above, while a new process reads the current one.
+        for _ in 0..<10 {
             switch client.enqueue(frame) {
             case .enqueued, .dropped:
                 break
@@ -125,12 +146,8 @@ final class SimCamCLIClient {
                 fail("sink closed unexpectedly", code: 2)
             }
             Thread.sleep(forTimeInterval: 0.1)
-            if let now = try? client.readStatus(), now.framesReceived > before.framesReceived {
-                received = true
-                break
-            }
         }
-        guard received else {
+        guard let now = Self.freshFramesReceived(), now > before.framesReceived else {
             fail("the extension never acknowledged the frame (is it running? check `simcamctl status`)", code: 2)
         }
         print(description)

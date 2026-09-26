@@ -93,6 +93,9 @@ struct MainView: View {
                 .onChange(of: simulatorOrientation) { _, value in
                     SimulatorFeed.shared.orientation = value
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .simulatorOrientationChanged)) { _ in
+                    simulatorOrientation = SimulatorFeed.shared.orientation
+                }
             }
             Text("Portrait fills an upright iPhone camera view; landscape suits apps that rotate the camera. The Mac virtual camera always gets landscape.")
                 .font(.caption)

@@ -45,6 +45,23 @@ simcamctl sim-enable --app host.exp.Exponent      # 対象を絞る場合（--ap
    - 画面下の「iOS Simulator apps: N」で、つながっているアプリの数を確認できます。
    - 画像・QR にバーコードが写っていれば、アプリの読み取り処理が動きます（QR、EAN-13/8、UPC-E、Code128、Code39、Code93、ITF、DataMatrix、PDF417、Aztec）。
 
+### コマンドで映像を切り替える（自動テスト・CI 向け）
+
+SimulatorCamera アプリを起動した状態で実行します。アプリの画面で選んだときと同じく、シミュレータ内のアプリと Mac の仮想カメラの両方に届き、アプリの表示も切り替わります。
+
+```bash
+simcamctl set-source --qr "https://example.com"          # QR コード
+simcamctl set-source --image ./barcodes/4570000011.png   # 画像（バーコード画像など）
+simcamctl set-source --video ./scan.mov                  # 動画（繰り返し再生）
+simcamctl set-source --camera                            # Mac のカメラ
+simcamctl set-source --pattern                           # テストパターン
+simcamctl sim-orientation portrait                       # 縦 / landscape で横
+simcamctl status                                         # 現在のソースと接続中のアプリ数
+```
+
+- アプリが起動していないと、`--qr` `--image` `--pattern` は Mac の仮想カメラにだけ届きます（シミュレータには届きません）。`--video` `--camera` `sim-orientation` はアプリが必要です。
+- 操作用の窓口は Mac 内（127.0.0.1:47848）からのみ受け付けます。
+
 ### 状態確認・解除
 
 ```bash

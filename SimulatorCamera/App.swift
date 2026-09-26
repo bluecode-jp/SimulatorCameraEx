@@ -36,6 +36,7 @@ struct SimulatorCameraApp: App {
                     cameraLink.connect()
                     SimulatorFeed.shared.start()
                     simulatorAutoEnabler.start()
+                    ControlServer.shared.start(sourceManager: sourceManager)
                 }
         }
         .windowResizability(.contentSize)

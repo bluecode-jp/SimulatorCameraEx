@@ -16,6 +16,7 @@
 		2AB97A0BCC2C375207D8AFD6 /* FrameRaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */; };
 		30DCA34043EAA4DDA7E43A57 /* CMIOSinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */; };
 		313CD0876911B414C8C71B91 /* FrameRaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */; };
+		3715C7ABE17C66E52168235B /* AppControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45E9F3278B1A90A9EEE810BD /* AppControl.swift */; };
 		386FA16D47CF0C291E857D00 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C0BF6EA2153FF6E4FBC5A8 /* MainView.swift */; };
 		407FDEB20AF617B242C43F43 /* QRSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5543F1512AE6614C0DE4861D /* QRSource.swift */; };
 		4FC626F7D38B26A92C8F017F /* QRRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */; };
@@ -28,6 +29,7 @@
 		9F46B480FDD94B5D2359EB61 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34DBFC0A082BB7CE216717D6 /* main.swift */; };
 		A03B198646B946D161279AE4 /* ExtensionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F7FE73205CB332230563010 /* ExtensionController.swift */; };
 		A17CABFD712A0F8A6992E430 /* CameraContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 208AA3693AAB57C41B83F610 /* CameraContractTests.swift */; };
+		A340FC3212792C2570920181 /* ControlServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F37AD8D1038AFAD626489CDE /* ControlServer.swift */; };
 		A86A15DD7CB53CE6EB144F28 /* CMIOSinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */; };
 		B0A2081D086185F9AD9A044F /* SimulatorFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16A1DE37C881B7ABD3CC24D /* SimulatorFeed.swift */; };
 		B7D4DF4D9F8B0DF144F15BA1 /* simcamctl in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = FABB5CBC712CB80CE50B8C1E /* simcamctl */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -98,6 +100,7 @@
 		37304038FE36D2D1035F449C /* CameraLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraLink.swift; sourceTree = "<group>"; };
 		382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRRenderer.swift; sourceTree = "<group>"; };
 		43B87B0329FCDB57DA155712 /* SimulatorInjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorInjection.swift; sourceTree = "<group>"; };
+		45E9F3278B1A90A9EEE810BD /* AppControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppControl.swift; sourceTree = "<group>"; };
 		4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacCameraSource.swift; sourceTree = "<group>"; };
 		5009C01A5443FF9242C25F78 /* SourceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceManager.swift; sourceTree = "<group>"; };
 		5543F1512AE6614C0DE4861D /* QRSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRSource.swift; sourceTree = "<group>"; };
@@ -111,6 +114,7 @@
 		E16A1DE37C881B7ABD3CC24D /* SimulatorFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorFeed.swift; sourceTree = "<group>"; };
 		EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
 		EED1C6F161452746D401A561 /* CameraContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraContract.swift; sourceTree = "<group>"; };
+		F37AD8D1038AFAD626489CDE /* ControlServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlServer.swift; sourceTree = "<group>"; };
 		F98E17DBE81C3CB7BB6DD64F /* SimulatorCameraExtension.systemextension */ = {isa = PBXFileReference; explicitFileType = "wrapper.system-extension"; includeInIndex = 0; path = SimulatorCameraExtension.systemextension; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9C0BF6EA2153FF6E4FBC5A8 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		FABB5CBC712CB80CE50B8C1E /* simcamctl */ = {isa = PBXFileReference; includeInIndex = 0; path = simcamctl; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -128,6 +132,7 @@
 		272BD53EC752678E900DC201 /* simcamctl */ = {
 			isa = PBXGroup;
 			children = (
+				45E9F3278B1A90A9EEE810BD /* AppControl.swift */,
 				34DBFC0A082BB7CE216717D6 /* main.swift */,
 				17E2492228A96A265315275C /* SimCamCLIClient.swift */,
 				43B87B0329FCDB57DA155712 /* SimulatorInjection.swift */,
@@ -183,6 +188,7 @@
 			children = (
 				DCE77BA32C83D30E6F389FEC /* App.swift */,
 				37304038FE36D2D1035F449C /* CameraLink.swift */,
+				F37AD8D1038AFAD626489CDE /* ControlServer.swift */,
 				9F7FE73205CB332230563010 /* ExtensionController.swift */,
 				0C92C6072F6DEFA308054810 /* FrameSource.swift */,
 				EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */,
@@ -359,6 +365,7 @@
 				C19164B157204DEC18FE9AEA /* CMIOSinkClient.swift in Sources */,
 				B99D036AA1563999AD109EBB /* CameraContract.swift in Sources */,
 				51E5EA50870F8492143CA20F /* CameraLink.swift in Sources */,
+				A340FC3212792C2570920181 /* ControlServer.swift in Sources */,
 				A03B198646B946D161279AE4 /* ExtensionController.swift in Sources */,
 				CA28817E141686080C6B6B62 /* FrameRaster.swift in Sources */,
 				501C657F795A0DC953369029 /* FrameSource.swift in Sources */,
@@ -403,6 +410,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3715C7ABE17C66E52168235B /* AppControl.swift in Sources */,
 				A86A15DD7CB53CE6EB144F28 /* CMIOSinkClient.swift in Sources */,
 				123734FDBD4B874EC803EC0B /* CameraContract.swift in Sources */,
 				313CD0876911B414C8C71B91 /* FrameRaster.swift in Sources */,
