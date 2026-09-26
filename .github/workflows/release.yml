@@ -1,9 +1,7 @@
 name: Release
 
+# Manual only (no tag trigger): signing secrets are not configured yet.
 on:
-  push:
-    tags:
-      - "v*.*.*"
   workflow_dispatch:
     inputs:
       version:
