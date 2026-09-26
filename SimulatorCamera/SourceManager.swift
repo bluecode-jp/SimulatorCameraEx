@@ -203,5 +203,6 @@ final class SourceManager {
         activeSource?.stop()
         activeSource = nil
         framesPushed = 0
+        SimulatorFeed.shared.reset()
     }
 }

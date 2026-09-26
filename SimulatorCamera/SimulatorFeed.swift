@@ -43,6 +43,9 @@ final class SimulatorFeed: @unchecked Sendable {
     private var latestMeta = Data("[]".utf8)
     private var detecting = false
     private var lastDetect = Date.distantPast
+    // Bumped by reset(); frames and detections started under an older
+    // generation are discarded so a previous source never leaks through.
+    private var generation: UInt64 = 0
 
     private final class Client {
         let connection: NWConnection
@@ -116,13 +119,32 @@ final class SimulatorFeed: @unchecked Sendable {
         detectBarcodesIfDue(pixelBuffer)
         metaLock.lock()
         let meta = latestMeta
+        let frameGeneration = generation
         metaLock.unlock()
         guard let message = Self.encode(pixelBuffer, meta: meta) else { return }
         queue.async { [self] in
+            guard frameGeneration == currentGeneration else { return }
             latest = message
             sequence &+= 1
             for client in clients.values { pump(client) }
         }
+    }
+
+    /// Forget the last frame and barcode result. Called when the source
+    /// changes and when the last client leaves, so the next client never
+    /// starts with a frame from a source that is no longer selected.
+    func reset() {
+        metaLock.lock()
+        generation &+= 1
+        latestMeta = Data("[]".utf8)
+        lastDetect = .distantPast
+        metaLock.unlock()
+        queue.async { [self] in latest = nil }
+    }
+
+    private var currentGeneration: UInt64 {
+        metaLock.lock(); defer { metaLock.unlock() }
+        return generation
     }
 
     // MARK: - Barcodes
@@ -139,12 +161,13 @@ final class SimulatorFeed: @unchecked Sendable {
         metaLock.lock()
         let due = !detecting && Date().timeIntervalSince(lastDetect) >= 0.1
         if due { detecting = true; lastDetect = Date() }
+        let detectGeneration = generation
         metaLock.unlock()
         guard due else { return }
         detectQueue.async { [self] in
             let meta = Self.detectBarcodes(pixelBuffer)
             metaLock.lock()
-            latestMeta = meta
+            if detectGeneration == generation { latestMeta = meta }
             detecting = false
             metaLock.unlock()
         }
@@ -187,6 +210,7 @@ final class SimulatorFeed: @unchecked Sendable {
             case .failed, .cancelled:
                 self.clients[id] = nil
                 self.log.info("simulator client gone")
+                if self.clients.isEmpty { self.reset() }
             default:
                 break
             }
