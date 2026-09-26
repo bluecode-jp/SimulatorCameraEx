@@ -15,7 +15,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
   - EAN-13
   - 静止画
   - 動画
-- 付属の CLI（`simcamctl`）で映像を切り替えられるので、自動テストや CI でも使えます。
+- 付属の CLI（`simcamctl`）や JSON の窓口で映像を切り替えられるので、自動テストや CI、AI エージェントからも使えます。手順は [docs/AUTOMATION.md](docs/AUTOMATION.md) にまとめています。
 - **Android エミュレータ**でも、同じ映像をカメラとして使えます（標準の VirtualScene の代わり）。「[Android エミュレータで使う](#android-エミュレータで使う)」を参照してください。
 
 ---
@@ -73,6 +73,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 └──────────────────────────────────────────────────────────────────┘
 ```
 
+- Android エミュレータは、CMIO 拡張の仮想カメラを Mac のカメラ（`webcamN`）の1台として使います。Android 側への注入はありません。
 - シミュレータのアプリは、中身は Mac 上で動くプロセスです。そのため localhost（127.0.0.1）で Mac アプリとつながります。
 - 注入ライブラリは入口役（`SimCamLoader.dylib`）と本体（`SimCamInject.dylib`）の2つに分かれています。入口役は、ユーザーがインストールしたアプリにだけ本体を読み込みます。シミュレータのシステムプロセスには本体を読み込みません。
 - どちらのライブラリも、アプリの `Contents/Resources/SimCamInject/` に同梱されています。
@@ -221,6 +222,8 @@ $SIMCAMCTL sim-launch host.exp.Exponent --url exp://127.0.0.1:8081   # 1回の�
 
 ### 自動テストでの使い方の例
 
+手順・待ち時間・終了コード・JSON での操作・Android での流れは [docs/AUTOMATION.md](docs/AUTOMATION.md) を参照してください。
+
 ```bash
 $SIMCAMCTL set-source --code128 "4570000011"
 xcrun simctl launch booted <bundle id>   # テストしたいアプリを起動し、カメラ画面を開く
@@ -309,11 +312,12 @@ $SIMCAMCTL android-setup Medium_Phone_API_36.0   # AVD の config.ini の hw.cam
 
 | パス | 内容 |
 |---|---|
-| `SimulatorCamera/` | Mac アプリ（SwiftUI）。映像ソース、`SimulatorFeed`（映像の配信）、`ControlServer`（CLI からの操作）、`SimulatorAutoEnabler`（注入の自動有効化） |
+| `SimulatorCamera/` | Mac アプリ（SwiftUI）。映像ソース、`SimulatorFeed`（映像の配信）、`ControlServer`（CLI からの操作）、`SimulatorAutoEnabler`（注入の自動有効化）、`AndroidEmulatorCard` / `SimulatorLaunchRow`（エミュレータ・シミュレータの起動） |
 | `SimCamInject/` | iOS シミュレータ用の注入ライブラリ（Objective-C / C）と `build.sh` |
 | `SimulatorCameraExtension/` | Mac の仮想カメラ（CMIO 拡張） |
 | `simcamctl/` | CLI |
-| `Shared/` | アプリ・拡張・CLI で共通のコード（通信の約束事、QR / バーコードの描画など） |
+| `Shared/` | アプリ・拡張・CLI で共通のコード（通信の約束事、QR / バーコードの描画、Android エミュレータの起動 `AndroidEmulator.swift`（拡張には含めない）など） |
+| `docs/AUTOMATION.md` | 自動テスト・AI エージェント向けの操作手順 |
 | `Tests/` | ユニットテスト |
 | `scripts/make-icon.swift` | アプリアイコンを描いて生成する |
 | `scripts/build-release.sh` | 配布用 DMG を作る（Developer ID で署名し、公証する） |
