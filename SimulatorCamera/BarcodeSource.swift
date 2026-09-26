@@ -32,7 +32,7 @@ final class BarcodeSource: FrameSource {
         task?.cancel()
         let payload = self.payload, symbology = self.symbology
         let frame = try await Task.detached(priority: .userInitiated) {
-            guard let frame = BarcodeRenderer.render(payload: payload, symbology: symbology) else {
+            guard let frame = BarcodeRenderer.render(payload: payload, symbology: symbology, virtualCamera: true) else {
                 throw FrameSourceError.invalidInput(symbology == .ean13
                     ? "EAN-13 needs 1–12 digits (check digit added) or 13 digits with a valid check digit."
                     : "Code 128 needs printable ASCII text.")
@@ -59,7 +59,7 @@ final class BarcodeSource: FrameSource {
         let payload = self.payload, symbology = self.symbology
         while !Task.isCancelled {
             onFrame?(frame)
-            if let onFeedFrame, let feed = SimulatorFeed.shared.frame(from: frame, render: { size in
+            if let onFeedFrame, let feed = SimulatorFeed.shared.frame(from: frame, alwaysRender: true, render: { size in
                 let key = "\(Int(size.width))x\(Int(size.height))"
                 if feedFrames[key] == nil { feedFrames[key] = BarcodeRenderer.render(payload: payload, symbology: symbology, size: size) }
                 return feedFrames[key]

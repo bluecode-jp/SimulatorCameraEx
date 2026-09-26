@@ -40,6 +40,7 @@ struct MainView: View {
                         fitWindow(toContentHeight: maxY + 20)
                     }
                 simulatorCard
+                AndroidEmulatorCard()
                 diagnosticsCard
                 footer
             }
@@ -122,6 +123,7 @@ struct MainView: View {
         @Bindable var auto = simulatorAutoEnabler
         return VStack(alignment: .leading, spacing: 8) {
             Text("iOS Simulator").font(.headline)
+            SimulatorLaunchRow()
             Toggle("Enable the camera in iOS Simulators automatically when they boot", isOn: $auto.isEnabled)
                 .font(.callout)
             HStack {

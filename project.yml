@@ -112,6 +112,8 @@ targets:
           - "Info.plist"
           - "*.entitlements"
       - path: Shared
+        excludes:
+          - "AndroidEmulator.swift"
     info:
       path: SimulatorCameraExtension/Info.plist
       properties:

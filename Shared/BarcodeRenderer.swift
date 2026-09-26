@@ -71,11 +71,13 @@ public enum BarcodeRenderer {
     // MARK: - Rendering
 
     /// Nil when `payload` cannot be encoded (empty, non-ASCII for Code 128,
-    /// wrong digits for EAN-13).
+    /// wrong digits for EAN-13). `virtualCamera`: a frame for the CMIO
+    /// extension, sized to survive the Android Emulator's crop.
     public static func render(
         payload: String,
         symbology: BarcodeSymbology,
-        size: CGSize = FrameRaster.canonicalSize
+        size: CGSize = FrameRaster.canonicalSize,
+        virtualCamera: Bool = false
     ) -> CVPixelBuffer? {
         let modules: [Bool]
         let caption: String
@@ -90,11 +92,17 @@ public enum BarcodeRenderer {
             caption = payload
         }
 
-        // Integer module width so bars stay crisp; quiet zone of 10 modules
-        // per side, the barcode filling at most 84% of the frame width.
+        // Quiet zone of 10 modules per side, the barcode filling at most 84%
+        // of the width. Simulator frames use an integer module width so bars
+        // stay crisp. The virtual camera fits the crop-safe middle instead
+        // (see FrameRaster.cropSafeSize) with a fractional module width, as
+        // flooring to whole pixels there would waste up to half the space;
+        // the emulator rescales the frame anyway.
         let quiet = 10
-        let moduleWidth = max(1, Int(size.width * 0.84) / (modules.count + 2 * quiet))
-        let barsWidth = CGFloat(modules.count * moduleWidth)
+        let moduleWidth: CGFloat = virtualCamera
+            ? max(1, FrameRaster.cropSafeSize(for: size).width * 0.84 / CGFloat(modules.count + 2 * quiet))
+            : CGFloat(max(1, Int(size.width * 0.84) / (modules.count + 2 * quiet)))
+        let barsWidth = CGFloat(modules.count) * moduleWidth
         let barHeight = (min(size.width, size.height) * 0.30).rounded()
         let fontSize = max(18, (barHeight * 0.16).rounded())
         let gap = (fontSize * 0.5).rounded()
@@ -105,8 +113,10 @@ public enum BarcodeRenderer {
 
         return FrameRaster.render(size: size, background: CGColor(gray: 1, alpha: 1)) { ctx in
             ctx.setFillColor(CGColor(gray: 0, alpha: 1))
+            // Bar edges snapped to whole pixels (a no-op for integer widths).
+            let edge = { (i: Int) in (x0 + CGFloat(i) * moduleWidth).rounded() }
             for (i, bar) in modules.enumerated() where bar {
-                ctx.fill(CGRect(x: x0 + CGFloat(i * moduleWidth), y: yBars, width: CGFloat(moduleWidth), height: barHeight))
+                ctx.fill(CGRect(x: edge(i), y: yBars, width: edge(i + 1) - edge(i), height: barHeight))
             }
             drawCaption(caption, in: ctx, centerX: size.width / 2, baselineY: yText + fontSize * 0.2, fontSize: fontSize)
         }

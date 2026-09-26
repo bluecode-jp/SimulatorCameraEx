@@ -30,7 +30,7 @@ final class QRSource: FrameSource {
         task?.cancel()
         let payload = self.payload
         let frame = try await Task.detached(priority: .userInitiated) {
-            guard let frame = QRRenderer.render(payload: payload) else {
+            guard let frame = QRRenderer.render(payload: payload, virtualCamera: true) else {
                 throw FrameSourceError.invalidInput("Could not render a QR code for that payload (too long?).")
             }
             return frame
@@ -55,7 +55,7 @@ final class QRSource: FrameSource {
         let payload = self.payload
         while !Task.isCancelled {
             onFrame?(frame)
-            if let onFeedFrame, let feed = SimulatorFeed.shared.frame(from: frame, render: { size in
+            if let onFeedFrame, let feed = SimulatorFeed.shared.frame(from: frame, alwaysRender: true, render: { size in
                 let key = "\(Int(size.width))x\(Int(size.height))"
                 if feedFrames[key] == nil { feedFrames[key] = QRRenderer.render(payload: payload, size: size) }
                 return feedFrames[key]

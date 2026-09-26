@@ -53,6 +53,13 @@ func usage() -> Never {
       All sim-* commands take --device UDID (default: booted). Frames come from
       the running SimulatorCamera.app; pick the source there.
 
+    ANDROID EMULATOR (the virtual camera as an Android camera, no injection):
+      android-list                 List AVDs and the camera's emulator label (webcamN)
+      android-launch AVD [--front] Start an AVD with the camera as its back camera
+                                   (and front camera with --front)
+      android-setup AVD            Make it the AVD's default back camera, for launches
+                                   from Android Studio (redo after Mac cameras change)
+
       help                         Show this help
 
     EXIT CODES:
@@ -83,6 +90,9 @@ case "help", "-h", "--help":
 
 case "sim-enable", "sim-disable", "sim-status", "sim-launch":
     SimulatorInjection.run(subcommand, Array(args.dropFirst(2)))
+
+case "android-list", "android-launch", "android-setup":
+    AndroidCommands.run(subcommand, Array(args.dropFirst(2)))
 
 case "__frames-received":   // internal: see SimCamCLIClient.freshFramesReceived
     cli.runPrintFramesReceived()

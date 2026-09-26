@@ -16,13 +16,25 @@ public enum QRRenderer {
     public static let qrSide: CGFloat = 600
 
     /// Nil when Core Image cannot encode the payload (empty or too long).
-    public static func render(payload: String, size: CGSize = FrameRaster.canonicalSize) -> CVPixelBuffer? {
+    /// `virtualCamera`: a frame for the CMIO extension, sized to survive the
+    /// Android Emulator's crop.
+    public static func render(
+        payload: String,
+        size: CGSize = FrameRaster.canonicalSize,
+        virtualCamera: Bool = false
+    ) -> CVPixelBuffer? {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(payload.utf8)
         filter.correctionLevel = "M"
         guard let base = filter.outputImage, base.extent.width > 0, base.extent.height > 0 else {
             return nil
         }
+        // The virtual camera keeps the code well inside the crop-safe area
+        // (see FrameRaster.cropSafeSize); simulator frames use qrSide.
+        let safe = FrameRaster.cropSafeSize(for: size)
+        let qrSide = virtualCamera
+            ? min(Self.qrSide, (min(safe.width, safe.height) * 0.75).rounded(.down))
+            : Self.qrSide
         let scaled = base.transformed(by: CGAffineTransform(
             scaleX: qrSide / base.extent.width,
             y: qrSide / base.extent.height

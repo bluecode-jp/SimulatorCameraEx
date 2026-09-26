@@ -31,6 +31,14 @@ public enum FrameRaster {
         return CGRect(x: (bounds.width - w) / 2, y: (bounds.height - h) / 2, width: w, height: h)
     }
 
+    /// Part of a frame that survives a centered portrait 3:4 crop. The
+    /// Android Emulator hands a landscape webcam to portrait apps as a
+    /// 3:4 crop of its middle (only 540 of 1280 px), so codes generated for
+    /// the virtual camera are sized to this area, quiet zones included.
+    public static func cropSafeSize(for size: CGSize) -> CGSize {
+        CGSize(width: min(size.width, (size.height * 3 / 4).rounded(.down)), height: size.height)
+    }
+
     /// Canonical frame size (what the CMIO extension accepts).
     public static let canonicalSize = CGSize(width: kSimCamFrameWidth, height: kSimCamFrameHeight)
 

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		07A2A4651AA575FEBF94D191 /* SimulatorCameraProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06AC788CDB1F5546EF813A18 /* SimulatorCameraProvider.swift */; };
 		0B0F268D9B7EE26F8904395C /* SourceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5009C01A5443FF9242C25F78 /* SourceManager.swift */; };
+		0DDB158193078FB26D946A7D /* AndroidEmulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE843D71E3077B25D6C78FF9 /* AndroidEmulator.swift */; };
 		123734FDBD4B874EC803EC0B /* CameraContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED1C6F161452746D401A561 /* CameraContract.swift */; };
 		15791A539F2708C098E31D62 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */; };
 		179FDC3A8B0E644F699454C4 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79EB81F6F0FA26FC8C0D512B /* main.swift */; };
@@ -21,14 +22,19 @@
 		386FA16D47CF0C291E857D00 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C0BF6EA2153FF6E4FBC5A8 /* MainView.swift */; };
 		3AB62993BD2B24F59854562F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D0F6334A3ECFAC35CE2A89BC /* Assets.xcassets */; };
 		407FDEB20AF617B242C43F43 /* QRSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5543F1512AE6614C0DE4861D /* QRSource.swift */; };
+		495A9E28E67E71B3C3A024CF /* SimulatorLaunchRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9B2D04DAF5505543B13B98 /* SimulatorLaunchRow.swift */; };
 		4FC626F7D38B26A92C8F017F /* QRRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */; };
 		501C657F795A0DC953369029 /* FrameSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C92C6072F6DEFA308054810 /* FrameSource.swift */; };
 		51E5EA50870F8492143CA20F /* CameraLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37304038FE36D2D1035F449C /* CameraLink.swift */; };
 		5E029E026C17668F22241296 /* FrameRaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */; };
+		6450DC822B3F042090A58C2C /* AndroidCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2972288C8CCDC2913C9386E /* AndroidCommands.swift */; };
 		7020E4B5C769A95FD5E1E64D /* BarcodeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3194EE6E34C00FD7A7BD6598 /* BarcodeRenderer.swift */; };
 		704954DE3FE7D5F29F53A9EF /* QRRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */; };
 		74DD50F7D469EA62AEE3B708 /* BarcodeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3194EE6E34C00FD7A7BD6598 /* BarcodeRenderer.swift */; };
 		79393074F69A438E4A0665DC /* SimulatorCameraExtension.systemextension in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = F98E17DBE81C3CB7BB6DD64F /* SimulatorCameraExtension.systemextension */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		7E7CCBF4BF45E49EE8C20F45 /* AndroidEmulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE843D71E3077B25D6C78FF9 /* AndroidEmulator.swift */; };
+		81AD8BFD5BBCC6384F7FADA4 /* AndroidEmulatorCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD43FD4C5D4295A5B04AB587 /* AndroidEmulatorCard.swift */; };
+		8F42AC786280C829EDFE48B4 /* AndroidEmulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE843D71E3077B25D6C78FF9 /* AndroidEmulator.swift */; };
 		9A9423F300616A5876893390 /* SimCamCLIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E2492228A96A265315275C /* SimCamCLIClient.swift */; };
 		9F46B480FDD94B5D2359EB61 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34DBFC0A082BB7CE216717D6 /* main.swift */; };
 		A03B198646B946D161279AE4 /* ExtensionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F7FE73205CB332230563010 /* ExtensionController.swift */; };
@@ -46,6 +52,7 @@
 		D28E5DD221A2F8ACAEFD1D9A /* QRRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */; };
 		D3B54EFD8EC9634626E4351F /* MacCameraSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */; };
 		D97A5DF273D525682867329C /* CMIOSinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */; };
+		E6D3244704A3C660D3685E78 /* AndroidEmulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D8BB0DAC0710DA7995522F /* AndroidEmulatorTests.swift */; };
 		EA24C3B90C006BB89A1CDC6B /* CameraContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED1C6F161452746D401A561 /* CameraContract.swift */; };
 		EC528B46AA12DFEE91D1654D /* BarcodeRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A62718E1F73F1EE46A08C487 /* BarcodeRendererTests.swift */; };
 		F6D3FCD3CDF09C4E6AB84FB0 /* VideoFileSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CD7BA6EB552D5C96D7431 /* VideoFileSource.swift */; };
@@ -112,7 +119,9 @@
 		4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacCameraSource.swift; sourceTree = "<group>"; };
 		5009C01A5443FF9242C25F78 /* SourceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceManager.swift; sourceTree = "<group>"; };
 		5543F1512AE6614C0DE4861D /* QRSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRSource.swift; sourceTree = "<group>"; };
+		5C9B2D04DAF5505543B13B98 /* SimulatorLaunchRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorLaunchRow.swift; sourceTree = "<group>"; };
 		6611BE63E8220E854DEB7293 /* SimulatorAutoEnabler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorAutoEnabler.swift; sourceTree = "<group>"; };
+		70D8BB0DAC0710DA7995522F /* AndroidEmulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AndroidEmulatorTests.swift; sourceTree = "<group>"; };
 		79EB81F6F0FA26FC8C0D512B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameRaster.swift; sourceTree = "<group>"; };
 		9F7FE73205CB332230563010 /* ExtensionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionController.swift; sourceTree = "<group>"; };
@@ -122,19 +131,23 @@
 		D0F6334A3ECFAC35CE2A89BC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DB54B2F9E37B302B163A2E80 /* SimulatorCamera.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimulatorCamera.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCE77BA32C83D30E6F389FEC /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		DD43FD4C5D4295A5B04AB587 /* AndroidEmulatorCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AndroidEmulatorCard.swift; sourceTree = "<group>"; };
 		E16A1DE37C881B7ABD3CC24D /* SimulatorFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorFeed.swift; sourceTree = "<group>"; };
 		EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
 		EED1C6F161452746D401A561 /* CameraContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraContract.swift; sourceTree = "<group>"; };
+		F2972288C8CCDC2913C9386E /* AndroidCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AndroidCommands.swift; sourceTree = "<group>"; };
 		F37AD8D1038AFAD626489CDE /* ControlServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlServer.swift; sourceTree = "<group>"; };
 		F98E17DBE81C3CB7BB6DD64F /* SimulatorCameraExtension.systemextension */ = {isa = PBXFileReference; explicitFileType = "wrapper.system-extension"; includeInIndex = 0; path = SimulatorCameraExtension.systemextension; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9C0BF6EA2153FF6E4FBC5A8 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		FABB5CBC712CB80CE50B8C1E /* simcamctl */ = {isa = PBXFileReference; includeInIndex = 0; path = simcamctl; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE843D71E3077B25D6C78FF9 /* AndroidEmulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AndroidEmulator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		201FDA92DC5F211BE9CA007C /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				70D8BB0DAC0710DA7995522F /* AndroidEmulatorTests.swift */,
 				A62718E1F73F1EE46A08C487 /* BarcodeRendererTests.swift */,
 				208AA3693AAB57C41B83F610 /* CameraContractTests.swift */,
 			);
@@ -144,6 +157,7 @@
 		272BD53EC752678E900DC201 /* simcamctl */ = {
 			isa = PBXGroup;
 			children = (
+				F2972288C8CCDC2913C9386E /* AndroidCommands.swift */,
 				45E9F3278B1A90A9EEE810BD /* AppControl.swift */,
 				34DBFC0A082BB7CE216717D6 /* main.swift */,
 				17E2492228A96A265315275C /* SimCamCLIClient.swift */,
@@ -164,6 +178,7 @@
 		47C00AF28DD07896D781CE34 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				FE843D71E3077B25D6C78FF9 /* AndroidEmulator.swift */,
 				3194EE6E34C00FD7A7BD6598 /* BarcodeRenderer.swift */,
 				EED1C6F161452746D401A561 /* CameraContract.swift */,
 				B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */,
@@ -199,6 +214,7 @@
 		E1F89F8248179DAE48944641 /* SimulatorCamera */ = {
 			isa = PBXGroup;
 			children = (
+				DD43FD4C5D4295A5B04AB587 /* AndroidEmulatorCard.swift */,
 				DCE77BA32C83D30E6F389FEC /* App.swift */,
 				D0F6334A3ECFAC35CE2A89BC /* Assets.xcassets */,
 				A8B703546D7440C3B3E8DFA4 /* BarcodeSource.swift */,
@@ -212,6 +228,7 @@
 				5543F1512AE6614C0DE4861D /* QRSource.swift */,
 				6611BE63E8220E854DEB7293 /* SimulatorAutoEnabler.swift */,
 				E16A1DE37C881B7ABD3CC24D /* SimulatorFeed.swift */,
+				5C9B2D04DAF5505543B13B98 /* SimulatorLaunchRow.swift */,
 				5009C01A5443FF9242C25F78 /* SourceManager.swift */,
 				197CD7BA6EB552D5C96D7431 /* VideoFileSource.swift */,
 			);
@@ -388,6 +405,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7E7CCBF4BF45E49EE8C20F45 /* AndroidEmulator.swift in Sources */,
+				81AD8BFD5BBCC6384F7FADA4 /* AndroidEmulatorCard.swift in Sources */,
 				C45434EC9AC1413E7A3F2336 /* App.swift in Sources */,
 				F72B9D33ACE103F34B28A39B /* BarcodeRenderer.swift in Sources */,
 				316F89289C2E6446CB779CF8 /* BarcodeSource.swift in Sources */,
@@ -405,6 +424,7 @@
 				407FDEB20AF617B242C43F43 /* QRSource.swift in Sources */,
 				FC5CCA69640FAE816B043497 /* SimulatorAutoEnabler.swift in Sources */,
 				B0A2081D086185F9AD9A044F /* SimulatorFeed.swift in Sources */,
+				495A9E28E67E71B3C3A024CF /* SimulatorLaunchRow.swift in Sources */,
 				0B0F268D9B7EE26F8904395C /* SourceManager.swift in Sources */,
 				F6D3FCD3CDF09C4E6AB84FB0 /* VideoFileSource.swift in Sources */,
 			);
@@ -414,6 +434,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0DDB158193078FB26D946A7D /* AndroidEmulator.swift in Sources */,
+				E6D3244704A3C660D3685E78 /* AndroidEmulatorTests.swift in Sources */,
 				7020E4B5C769A95FD5E1E64D /* BarcodeRenderer.swift in Sources */,
 				EC528B46AA12DFEE91D1654D /* BarcodeRendererTests.swift in Sources */,
 				30DCA34043EAA4DDA7E43A57 /* CMIOSinkClient.swift in Sources */,
@@ -442,6 +464,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6450DC822B3F042090A58C2C /* AndroidCommands.swift in Sources */,
+				8F42AC786280C829EDFE48B4 /* AndroidEmulator.swift in Sources */,
 				3715C7ABE17C66E52168235B /* AppControl.swift in Sources */,
 				FCCED216693CE6485F9CB95D /* BarcodeRenderer.swift in Sources */,
 				A86A15DD7CB53CE6EB144F28 /* CMIOSinkClient.swift in Sources */,

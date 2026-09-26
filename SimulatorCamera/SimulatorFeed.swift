@@ -87,10 +87,13 @@ final class SimulatorFeed: @unchecked Sendable {
     /// The frame to send given a source's canonical one: the same buffer in
     /// landscape, otherwise `render(size)` (the source redraws from its
     /// original, so nothing is letterboxed twice). Nil when nobody listens.
-    func frame(from canonical: CVPixelBuffer, render: (CGSize) -> CVPixelBuffer?) -> CVPixelBuffer? {
+    /// `alwaysRender`: the canonical frame is laid out for the virtual camera
+    /// only (generated codes), so landscape is rendered separately too.
+    func frame(from canonical: CVPixelBuffer, alwaysRender: Bool = false,
+               render: (CGSize) -> CVPixelBuffer?) -> CVPixelBuffer? {
         guard clientCount > 0 else { return nil }
         let size = orientation.frameSize
-        return size == FrameRaster.canonicalSize ? canonical : render(size)
+        return size == FrameRaster.canonicalSize && !alwaysRender ? canonical : render(size)
     }
 
     func start() {

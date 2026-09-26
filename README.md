@@ -16,6 +16,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
   - 静止画
   - 動画
 - 付属の CLI（`simcamctl`）で映像を切り替えられるので、自動テストや CI でも使えます。
+- **Android エミュレータ**でも、同じ映像をカメラとして使えます（標準の VirtualScene の代わり）。「[Android エミュレータで使う](#android-エミュレータで使う)」を参照してください。
 
 ---
 
@@ -35,7 +36,8 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 | テストパターン | 黒地に白い線 | **カラーバー**（シミュレータと仮想カメラで同じ絵） |
 | CLI | 仮想カメラへ1枚だけ送る | アプリ経由でシミュレータと仮想カメラの両方に送れる。注入の管理（`sim-*`）、カメラの一覧・選択、向きの切り替えも追加 |
 | シミュレータ起動時の設定 | — | アプリ起動中は、起動したシミュレータへの注入を自動で有効化 |
-| 仮想カメラ（CMIO 拡張） | 必須 | **任意**。Zoom などの Mac アプリで使いたい場合だけ有効化する |
+| 仮想カメラ（CMIO 拡張） | 必須 | iOS シミュレータだけなら**任意**。Android エミュレータや Zoom などの Mac アプリで使う場合に有効化する |
+| Android エミュレータ | — | 仮想カメラを背面カメラにして AVD を起動する機能（画面・`android-*` コマンド） |
 | 署名・ID | 作者のチーム・`com.dautov.*` | BLUECODE,INC.（`C5TUJ8526Z`）・`jp.co.bluecode.*` |
 | 表示名・アイコン | SimulatorCamera | SimulatorCameraEx（独自アイコン） |
 
@@ -125,7 +127,7 @@ open /Applications/SimulatorCamera.app
 
 - **シミュレータ用の設定は不要です。** アプリが起動している間は、起動済みのシミュレータと、あとから起動したシミュレータに、注入が自動で有効になります。画面の「iOS Simulator」欄にある最初のスイッチで、オン・オフを切り替えられます。
 - **Mac Camera を使う場合**：初回にカメラへのアクセス許可を求められます。許可してください。
-- **Mac の仮想カメラも使う場合（任意）**：
+- **Android エミュレータや Mac の仮想カメラも使う場合**：
   1. アプリの **Activate** を押す
   2. 「システム設定 → 一般 → ログイン項目と機能拡張」でカメラ拡張を許可する（Mac ごとに初回のみ）
   - iOS シミュレータで使うだけなら、この手順は要りません。
@@ -159,6 +161,7 @@ EAN-13 の入力ルールは次のとおりです。
 
 ### 3. iOS Simulator 欄
 
+- **Device ＋ Launch**：選んだシミュレータを起動し、画面（Simulator.app、Xcode 27 以降は DeviceHub.app）を開きます。起動済みの機種には「— booted」と付きます。カメラは下の自動注入で入るので、起動したらアプリを開くだけです。
 - **Enable the camera in iOS Simulators automatically when they boot**：起動したシミュレータへの自動注入のオン・オフです。
 - **Frame orientation**：シミュレータに送る映像の向きです。
   - **Portrait 720×1280**（既定）：縦画面のカメラ表示向けです。画像・QR・動画は全体が収まるように、Mac カメラは中央を縦長に切り抜いて送ります。
@@ -226,6 +229,47 @@ xcrun simctl launch booted <bundle id>   # テストしたいアプリを起動�
 
 ---
 
+## Android エミュレータで使う
+
+Android エミュレータは、Mac のカメラを Android のカメラとして使えます（`webcamN`）。SimulatorCameraEx の仮想カメラ「SimulatorCamera Virtual」もその1台として見えるので、これを背面カメラにして AVD を起動します。Android 側への注入はありません。
+
+- 事前に、アプリの **Activate** で仮想カメラ（CMIO 拡張）を有効にしておきます（「初回の設定」を参照）。
+- 映像は、アプリの Source 欄や `simcamctl set-source` で選んだものがそのまま届きます。
+- バーコードは Android のアプリ自身（ML Kit、ZXing など）が映像から読み取ります。
+- Android Emulator 37.1（API 36）で確認済みです。
+
+### アプリから起動する（Android Emulator 欄）
+
+1. AVD を選ぶ（一覧は Android SDK の `emulator -list-avds`。**Refresh** で読み直す）
+2. **Launch** を押す
+   - **Front camera too** をオンにすると、前面カメラも同じ映像になります。
+3. エミュレータのカメラアプリで**背面カメラ**を選ぶ（前面カメラが開いた場合）
+
+### CLI から起動する
+
+```bash
+$SIMCAMCTL android-list                          # AVD の一覧と、仮想カメラの番号（webcamN）
+$SIMCAMCTL android-launch Medium_Phone_API_36.0  # 仮想カメラを背面カメラにして起動
+$SIMCAMCTL android-launch Medium_Phone_API_36.0 --front   # 前面カメラも同じ映像にする
+```
+
+- エミュレータのログは `~/Library/Logs/SimulatorCamera/emulator-<AVD名>.log` に出ます。
+- Android SDK は `ANDROID_HOME`、`ANDROID_SDK_ROOT`、`~/Library/Android/sdk` の順に探します。
+
+### Android Studio から起動したい場合
+
+```bash
+$SIMCAMCTL android-setup Medium_Phone_API_36.0   # AVD の config.ini の hw.camera.back を webcamN に書き換える
+```
+
+`webcamN` の番号は、Mac につながっているカメラ（USB カメラや iPhone の連係カメラ）が増減すると変わります。変わったら `android-setup` をやり直してください。アプリの **Launch** と `android-launch` は、起動のたびに番号を調べ直すので、この問題は起きません。
+
+### 注意
+- カメラは**エミュレータの起動時**に決まります。起動中の AVD は、一度終了してから起動し直してください。
+- 仮想カメラの映像は横長（1280×720）です。4:3 で表示するカメラアプリでは左右が少し切れることがあります。
+
+---
+
 ## 留意事項
 
 ### 影響する範囲
@@ -254,6 +298,8 @@ xcrun simctl launch booted <bundle id>   # テストしたいアプリを起動�
 | 「Extension not reachable」と表示される | カメラ拡張が準備中か、入れ替えの直後です。拡張を入れ替えたあとはアプリが自動で再起動するので、少し待ってください。シミュレータへの映像はこのエラーとは関係なく届きます |
 | `simcamctl: command not found` | PATH を通していません。フルパスで実行してください |
 | EAN-13 の **Generate** が押せない | チェックデジットが合っていません。12桁までで入力すると、自動で付けます |
+| Android エミュレータにドット絵の風景が映る | 前面カメラ（エミュレータの内蔵ダミー）が開いています。カメラアプリで背面カメラに切り替えてください |
+| Android Emulator 欄に「does not list 'SimulatorCamera Virtual'」と出る | 仮想カメラが有効になっていません。**Activate** を押してください |
 
 ---
 

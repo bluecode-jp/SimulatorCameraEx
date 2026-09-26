@@ -73,14 +73,14 @@ final class SimCamCLIClient {
 
     func runSetQR(payload: String) {
         guard !payload.isEmpty else { fail("empty QR payload", code: 3) }
-        guard let frame = QRRenderer.render(payload: payload) else {
+        guard let frame = QRRenderer.render(payload: payload, virtualCamera: true) else {
             fail("could not render a QR code for that payload (too long?)", code: 1)
         }
         pushSingleFrame(frame, kind: .qrCode, description: "QR pushed (\(payload.count) chars)")
     }
 
     func runSetBarcode(payload: String, symbology: BarcodeSymbology) {
-        guard let frame = BarcodeRenderer.render(payload: payload, symbology: symbology) else {
+        guard let frame = BarcodeRenderer.render(payload: payload, symbology: symbology, virtualCamera: true) else {
             fail(symbology == .ean13
                  ? "not a valid EAN-13: use 1–12 digits, or 13 digits with a correct check digit"
                  : "Code 128 needs printable ASCII text", code: 3)
