@@ -11,6 +11,8 @@
 //    {"command":"set-source","kind":"pattern"}
 //    {"command":"set-source","kind":"camera"}
 //    {"command":"set-source","kind":"qr","payload":"TEXT"}
+//    {"command":"set-source","kind":"code128","payload":"TEXT"}
+//    {"command":"set-source","kind":"ean13","payload":"123456789"}
 //    {"command":"set-source","kind":"image","path":"/abs/file.png"}
 //    {"command":"set-source","kind":"video","path":"/abs/file.mov"}
 //    {"command":"set-orientation","orientation":"portrait"|"landscape"}
@@ -139,6 +141,18 @@ final class ControlServer {
             }
             sourceManager.qrPayload = payload
             kind = .qrCode
+        case "code128":
+            guard let payload = request["payload"] as? String, !payload.isEmpty else {
+                return ["ok": false, "error": "code128 needs a payload"]
+            }
+            sourceManager.code128Payload = payload
+            kind = .code128
+        case "ean13":
+            guard let payload = request["payload"] as? String, BarcodeRenderer.ean13(from: payload) != nil else {
+                return ["ok": false, "error": "ean13 needs 1–12 digits (check digit added) or 13 digits with a valid check digit"]
+            }
+            sourceManager.ean13Payload = payload
+            kind = .ean13
         case "image", "video":
             guard let path = request["path"] as? String else {
                 return ["ok": false, "error": "\(request["kind"]!) needs a path"]
@@ -155,7 +169,7 @@ final class ControlServer {
                 kind = .videoFile
             }
         default:
-            return ["ok": false, "error": "kind must be pattern, camera, qr, image or video"]
+            return ["ok": false, "error": "kind must be pattern, camera, qr, code128, ean13, image or video"]
         }
         do {
             try await sourceManager.switchTo(kind)

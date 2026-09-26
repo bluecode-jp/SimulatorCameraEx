@@ -16,6 +16,10 @@ struct MainView: View {
     @Environment(SourceManager.self) private var sourceManager
     @Environment(SimulatorAutoEnabler.self) private var simulatorAutoEnabler
     @State private var simulatorOrientation = SimulatorFeed.shared.orientation
+    private static let contentSpace = "MainView.content"
+
+    /// Window height last set by fitWindow; nil until the first fit.
+    @State private var fittedWindowHeight: CGFloat?
 
     var body: some View {
         ScrollView {
@@ -23,29 +27,65 @@ struct MainView: View {
                 header
                 extensionStatusCard
                 sourcePicker
+                    // Initial window height: down to the Source card plus the
+                    // 20 pt gap before the next card (the VStack spacing), so
+                    // no sliver of the cards below shows; they are one scroll
+                    // (or a taller window) away.
+                    .onGeometryChange(for: CGFloat.self) {
+                        $0.frame(in: .named(Self.contentSpace)).maxY
+                    } action: { maxY in
+                        fitWindow(toContentHeight: maxY + 20)
+                    }
                 simulatorCard
                 diagnosticsCard
                 footer
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .top)
+            .coordinateSpace(.named(Self.contentSpace))
+        }
+    }
+
+    /// The window opens before SwiftUI knows how tall the cards are, and
+    /// they can grow later (status and error lines). Keep the window as tall
+    /// as `height` of content — capped to the screen, title bar kept in
+    /// place — until the user resizes it by hand, then leave their size alone.
+    private func fitWindow(toContentHeight height: CGFloat) {
+        guard height > 0 else { return }
+        DispatchQueue.main.async {
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }),
+                  let screen = window.screen ?? NSScreen.main else { return }
+            if let fitted = fittedWindowHeight, abs(window.frame.height - fitted) > 1 { return }  // user resized
+            let chrome = window.frame.height - window.contentLayoutRect.height
+            let target = min(height + chrome, screen.visibleFrame.height)
+            guard abs(window.frame.height - target) > 1 else { fittedWindowHeight = target; return }
+            var frame = window.frame
+            frame.origin.y += frame.height - target
+            frame.size.height = target
+            frame.origin.y = max(frame.origin.y, screen.visibleFrame.minY)
+            window.setFrame(frame, display: true, animate: false)
+            fittedWindowHeight = target
         }
     }
 
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "video.circle.fill")
-                .font(.system(size: 44))
-                .foregroundStyle(.tint)
-            Text("SimulatorCamera")
-                .font(.title.bold())
-            Text("Your Mac's camera, in the iOS Simulator. Free and open.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+        // Icon and name side by side, compact: the cards below are the point.
+        HStack(spacing: 10) {
+            Image("HeaderIcon")   // asset copy of the app icon; see scripts/make-icon.swift
+                .resizable()
+                .frame(width: 36, height: 36)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("SimulatorCameraEx")
+                    .font(.title3.bold())
+                Text("Your Mac's camera, in the iOS Simulator. Free and open.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Extension status
@@ -139,6 +179,8 @@ struct MainView: View {
             videoFileRow
             imageFileRow
             qrRow
+            code128Row
+            ean13Row
 
             if let err = sourceManager.lastError {
                 Text(err)
@@ -241,20 +283,60 @@ struct MainView: View {
 
     private var qrRow: some View {
         @Bindable var sm = sourceManager
-        return HStack(spacing: 10) {
-            Image(systemName: "qrcode")
+        return payloadRow(.qrCode, icon: "qrcode", title: "QR Code",
+                          placeholder: "Payload (URL or string)", text: $sm.qrPayload)
+    }
+
+    private var code128Row: some View {
+        @Bindable var sm = sourceManager
+        return payloadRow(.code128, icon: "barcode", title: "Code 128",
+                          placeholder: "Text (ASCII)", text: $sm.code128Payload)
+    }
+
+    private var ean13Row: some View {
+        @Bindable var sm = sourceManager
+        let code = BarcodeRenderer.ean13(from: sourceManager.ean13Payload)
+        return payloadRow(.ean13, icon: "barcode", title: "EAN-13",
+                          placeholder: "1–12 digits (check digit added) or 13 digits",
+                          text: $sm.ean13Payload,
+                          note: code.map { "Encodes \($0)" } ?? "Not a valid EAN-13 — use 1–12 digits, or 13 with a correct check digit",
+                          valid: code != nil)
+    }
+
+    /// Title on its own line, then field + button in one row so the button
+    /// is vertically centred on the text field (not on title and field
+    /// together, which pushed it up).
+    private func payloadRow(
+        _ kind: SimCamSourceKind,
+        icon: String,
+        title: String,
+        placeholder: String,
+        text: Binding<String>,
+        note: String? = nil,
+        valid: Bool = true
+    ) -> some View {
+        let isEmpty = text.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty
+        return HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
                 .font(.title3)
-                .foregroundStyle(sourceManager.activeKind == .qrCode ? Color.accentColor : .secondary)
+                .foregroundStyle(sourceManager.activeKind == kind ? Color.accentColor : .secondary)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 4) {
-                Text("QR Code").font(.callout)
-                TextField("Payload (URL or string)", text: $sm.qrPayload)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.caption)
+                Text(title).font(.callout.weight(sourceManager.activeKind == kind ? .semibold : .regular))
+                HStack(alignment: .center, spacing: 10) {
+                    TextField(placeholder, text: text)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.caption)
+                    Button("Generate") { switchSource(kind) }
+                        .controlSize(.small)
+                        .disabled(isEmpty || !valid || sourceManager.isSwitching)
+                }
+                if let note {
+                    Text(note)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(valid ? Color.secondary : Color.red)
+                }
             }
-            Button("Generate") { switchSource(.qrCode) }
-            .controlSize(.small)
-            .disabled(sourceManager.qrPayload.trimmingCharacters(in: .whitespaces).isEmpty || sourceManager.isSwitching)
         }
     }
 
@@ -295,11 +377,12 @@ struct MainView: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Once active, the iOS Simulator sees '\(kSimCamDeviceName)'")
+            Text("iOS Simulator apps get this source as their camera")
                 .font(.caption.bold())
-            Text("AVCaptureDevice.default(for: .video) returns it. Existing camera code Just Works.")
+            Text("AVCaptureDevice.default(for: .video) returns it and barcode scanning works, with no app changes. Switch sources from the command line with `simcamctl set-source`. Mac apps can use '\(kSimCamDeviceName)' once the extension is active.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -160,7 +160,7 @@ final class CameraLink {
         } else {
             try client.openSink()
         }
-        try client.setSourceKind(kind)
+        try client.setSourceKind(kind.extensionKind)
         refreshStatus()
     }
 

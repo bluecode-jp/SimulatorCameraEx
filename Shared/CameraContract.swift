@@ -83,6 +83,8 @@ public enum SimCamSourceKind: Int, Sendable, CaseIterable {
     case videoFile = 2     // container's AVAssetReader
     case image = 3         // container's static CGImage
     case qrCode = 4        // container's CIQRCodeGenerator
+    case code128 = 5       // container's BarcodeRenderer (Code 128)
+    case ean13 = 6         // container's BarcodeRenderer (EAN-13)
 
     public var label: String {
         switch self {
@@ -91,6 +93,18 @@ public enum SimCamSourceKind: Int, Sendable, CaseIterable {
         case .videoFile: return "video file"
         case .image: return "static image"
         case .qrCode: return "QR code"
+        case .code128: return "Code 128"
+        case .ean13: return "EAN-13"
+        }
+    }
+
+    /// What to tell the extension. Extensions built before a kind existed
+    /// ignore unknown values, so newer static sources travel as `.image`
+    /// (a still frame from the sink), which is exactly how they behave.
+    public var extensionKind: SimCamSourceKind {
+        switch self {
+        case .code128, .ean13: return .image
+        default: return self
         }
     }
 }

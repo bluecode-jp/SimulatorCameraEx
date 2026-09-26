@@ -28,7 +28,7 @@ final class SourceManager {
         var errorDescription: String? {
             switch self {
             case .noFileSelected: return "Pick a file first."
-            case .noPayloadProvided: return "Type a QR payload first."
+            case .noPayloadProvided: return "Type a payload first."
             case .startFailed(let m): return m
             }
         }
@@ -42,7 +42,10 @@ final class SourceManager {
     /// User input fields the UI binds to.
     var selectedFileURL: URL?
     var selectedImageURL: URL?
-    var qrPayload: String = "https://github.com/dautovri/SimulatorCamera"
+    var qrPayload: String = "https://www.bluecode.co.jp"
+    var code128Payload: String = "123456789"
+    /// 1–12 digits get zero-padded and a check digit; see BarcodeRenderer.ean13.
+    var ean13Payload: String = "1234567890128"
 
     private var activeSource: FrameSource?
     private var switchGeneration = 0
@@ -88,6 +91,14 @@ final class SourceManager {
             let payload = qrPayload.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !payload.isEmpty else { throw SwitchError.noPayloadProvided }
             source = QRSource(payload: payload)
+        case .code128:
+            let payload = code128Payload.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !payload.isEmpty else { throw SwitchError.noPayloadProvided }
+            source = BarcodeSource(payload: payload, symbology: .code128)
+        case .ean13:
+            let payload = ean13Payload.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !payload.isEmpty else { throw SwitchError.noPayloadProvided }
+            source = BarcodeSource(payload: payload, symbology: .ean13)
         }
 
         isSwitching = true

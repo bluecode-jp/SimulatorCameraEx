@@ -16,14 +16,18 @@
 		2AB97A0BCC2C375207D8AFD6 /* FrameRaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */; };
 		30DCA34043EAA4DDA7E43A57 /* CMIOSinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */; };
 		313CD0876911B414C8C71B91 /* FrameRaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */; };
+		316F89289C2E6446CB779CF8 /* BarcodeSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8B703546D7440C3B3E8DFA4 /* BarcodeSource.swift */; };
 		3715C7ABE17C66E52168235B /* AppControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45E9F3278B1A90A9EEE810BD /* AppControl.swift */; };
 		386FA16D47CF0C291E857D00 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C0BF6EA2153FF6E4FBC5A8 /* MainView.swift */; };
+		3AB62993BD2B24F59854562F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D0F6334A3ECFAC35CE2A89BC /* Assets.xcassets */; };
 		407FDEB20AF617B242C43F43 /* QRSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5543F1512AE6614C0DE4861D /* QRSource.swift */; };
 		4FC626F7D38B26A92C8F017F /* QRRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */; };
 		501C657F795A0DC953369029 /* FrameSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C92C6072F6DEFA308054810 /* FrameSource.swift */; };
 		51E5EA50870F8492143CA20F /* CameraLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37304038FE36D2D1035F449C /* CameraLink.swift */; };
 		5E029E026C17668F22241296 /* FrameRaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */; };
+		7020E4B5C769A95FD5E1E64D /* BarcodeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3194EE6E34C00FD7A7BD6598 /* BarcodeRenderer.swift */; };
 		704954DE3FE7D5F29F53A9EF /* QRRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */; };
+		74DD50F7D469EA62AEE3B708 /* BarcodeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3194EE6E34C00FD7A7BD6598 /* BarcodeRenderer.swift */; };
 		79393074F69A438E4A0665DC /* SimulatorCameraExtension.systemextension in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = F98E17DBE81C3CB7BB6DD64F /* SimulatorCameraExtension.systemextension */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9A9423F300616A5876893390 /* SimCamCLIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E2492228A96A265315275C /* SimCamCLIClient.swift */; };
 		9F46B480FDD94B5D2359EB61 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34DBFC0A082BB7CE216717D6 /* main.swift */; };
@@ -43,8 +47,11 @@
 		D3B54EFD8EC9634626E4351F /* MacCameraSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */; };
 		D97A5DF273D525682867329C /* CMIOSinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */; };
 		EA24C3B90C006BB89A1CDC6B /* CameraContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED1C6F161452746D401A561 /* CameraContract.swift */; };
+		EC528B46AA12DFEE91D1654D /* BarcodeRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A62718E1F73F1EE46A08C487 /* BarcodeRendererTests.swift */; };
 		F6D3FCD3CDF09C4E6AB84FB0 /* VideoFileSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CD7BA6EB552D5C96D7431 /* VideoFileSource.swift */; };
+		F72B9D33ACE103F34B28A39B /* BarcodeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3194EE6E34C00FD7A7BD6598 /* BarcodeRenderer.swift */; };
 		FC5CCA69640FAE816B043497 /* SimulatorAutoEnabler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6611BE63E8220E854DEB7293 /* SimulatorAutoEnabler.swift */; };
+		FCCED216693CE6485F9CB95D /* BarcodeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3194EE6E34C00FD7A7BD6598 /* BarcodeRenderer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +103,7 @@
 		17E2492228A96A265315275C /* SimCamCLIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimCamCLIClient.swift; sourceTree = "<group>"; };
 		197CD7BA6EB552D5C96D7431 /* VideoFileSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoFileSource.swift; sourceTree = "<group>"; };
 		208AA3693AAB57C41B83F610 /* CameraContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraContractTests.swift; sourceTree = "<group>"; };
+		3194EE6E34C00FD7A7BD6598 /* BarcodeRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeRenderer.swift; sourceTree = "<group>"; };
 		34DBFC0A082BB7CE216717D6 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		37304038FE36D2D1035F449C /* CameraLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraLink.swift; sourceTree = "<group>"; };
 		382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRRenderer.swift; sourceTree = "<group>"; };
@@ -108,7 +116,10 @@
 		79EB81F6F0FA26FC8C0D512B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameRaster.swift; sourceTree = "<group>"; };
 		9F7FE73205CB332230563010 /* ExtensionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionController.swift; sourceTree = "<group>"; };
+		A62718E1F73F1EE46A08C487 /* BarcodeRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeRendererTests.swift; sourceTree = "<group>"; };
+		A8B703546D7440C3B3E8DFA4 /* BarcodeSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeSource.swift; sourceTree = "<group>"; };
 		B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CMIOSinkClient.swift; sourceTree = "<group>"; };
+		D0F6334A3ECFAC35CE2A89BC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DB54B2F9E37B302B163A2E80 /* SimulatorCamera.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimulatorCamera.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCE77BA32C83D30E6F389FEC /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		E16A1DE37C881B7ABD3CC24D /* SimulatorFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorFeed.swift; sourceTree = "<group>"; };
@@ -124,6 +135,7 @@
 		201FDA92DC5F211BE9CA007C /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				A62718E1F73F1EE46A08C487 /* BarcodeRendererTests.swift */,
 				208AA3693AAB57C41B83F610 /* CameraContractTests.swift */,
 			);
 			path = Tests;
@@ -152,6 +164,7 @@
 		47C00AF28DD07896D781CE34 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				3194EE6E34C00FD7A7BD6598 /* BarcodeRenderer.swift */,
 				EED1C6F161452746D401A561 /* CameraContract.swift */,
 				B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */,
 				7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */,
@@ -187,6 +200,8 @@
 			isa = PBXGroup;
 			children = (
 				DCE77BA32C83D30E6F389FEC /* App.swift */,
+				D0F6334A3ECFAC35CE2A89BC /* Assets.xcassets */,
+				A8B703546D7440C3B3E8DFA4 /* BarcodeSource.swift */,
 				37304038FE36D2D1035F449C /* CameraLink.swift */,
 				F37AD8D1038AFAD626489CDE /* ControlServer.swift */,
 				9F7FE73205CB332230563010 /* ExtensionController.swift */,
@@ -262,6 +277,7 @@
 			buildConfigurationList = BBEB37D7F7DD731A68F7956A /* Build configuration list for PBXNativeTarget "SimulatorCamera" */;
 			buildPhases = (
 				1096B2376032B3F8640D7973 /* Sources */,
+				9A8AB188DEF97B96582F8BCF /* Resources */,
 				4AACD8F0F143DE3CA8F7D170 /* Embed Dependencies */,
 				0B57033FD09FA6582F57FF37 /* Embed Dependencies */,
 				9E5CB8695E568823215F382C /* Build SimCamInject */,
@@ -328,6 +344,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		9A8AB188DEF97B96582F8BCF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3AB62993BD2B24F59854562F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXShellScriptBuildPhase section */
 		9E5CB8695E568823215F382C /* Build SimCamInject */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -362,6 +389,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				C45434EC9AC1413E7A3F2336 /* App.swift in Sources */,
+				F72B9D33ACE103F34B28A39B /* BarcodeRenderer.swift in Sources */,
+				316F89289C2E6446CB779CF8 /* BarcodeSource.swift in Sources */,
 				C19164B157204DEC18FE9AEA /* CMIOSinkClient.swift in Sources */,
 				B99D036AA1563999AD109EBB /* CameraContract.swift in Sources */,
 				51E5EA50870F8492143CA20F /* CameraLink.swift in Sources */,
@@ -385,6 +414,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7020E4B5C769A95FD5E1E64D /* BarcodeRenderer.swift in Sources */,
+				EC528B46AA12DFEE91D1654D /* BarcodeRendererTests.swift in Sources */,
 				30DCA34043EAA4DDA7E43A57 /* CMIOSinkClient.swift in Sources */,
 				BE593A54205871224550F5FF /* CameraContract.swift in Sources */,
 				A17CABFD712A0F8A6992E430 /* CameraContractTests.swift in Sources */,
@@ -397,6 +428,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				74DD50F7D469EA62AEE3B708 /* BarcodeRenderer.swift in Sources */,
 				D97A5DF273D525682867329C /* CMIOSinkClient.swift in Sources */,
 				EA24C3B90C006BB89A1CDC6B /* CameraContract.swift in Sources */,
 				2AB97A0BCC2C375207D8AFD6 /* FrameRaster.swift in Sources */,
@@ -411,6 +443,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3715C7ABE17C66E52168235B /* AppControl.swift in Sources */,
+				FCCED216693CE6485F9CB95D /* BarcodeRenderer.swift in Sources */,
 				A86A15DD7CB53CE6EB144F28 /* CMIOSinkClient.swift in Sources */,
 				123734FDBD4B874EC803EC0B /* CameraContract.swift in Sources */,
 				313CD0876911B414C8C71B91 /* FrameRaster.swift in Sources */,

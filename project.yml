@@ -46,7 +46,10 @@ targets:
     info:
       path: SimulatorCamera/Info.plist
       properties:
-        CFBundleDisplayName: SimulatorCamera
+        # Shown in the menu bar, Dock and window; the bundle stays
+        # SimulatorCamera.app so paths (simcamctl, dylibs, docs) are unchanged.
+        CFBundleDisplayName: SimulatorCameraEx
+        CFBundleName: SimulatorCameraEx
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
@@ -61,6 +64,8 @@ targets:
         # The SimCamInject build phase runs clang + codesign, which need
         # temp/cache writes the user-script sandbox refuses.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+        # SimulatorCamera/Assets.xcassets, drawn by scripts/make-icon.swift.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: SimulatorCamera/SimulatorCamera.entitlements
         CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: YES

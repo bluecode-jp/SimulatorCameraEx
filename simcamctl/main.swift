@@ -31,6 +31,9 @@ func usage() -> Never {
       ping                         Verify the virtual camera is registered
       set-source --pattern         Use the built-in test pattern
       set-source --qr "PAYLOAD"    Generate + stream a QR code
+      set-source --code128 "TEXT"  Generate + stream a Code 128 barcode
+      set-source --ean DIGITS      Generate + stream an EAN-13 (1–12 digits get
+                                   zero-padded + check digit; or all 13 digits)
       set-source --image PATH      Stream a static PNG/JPG file
       set-source --video PATH      Stream a video file (loops)       [needs the app]
       set-source --camera          Stream the Mac's camera           [needs the app]
@@ -130,6 +133,8 @@ case "set-source":
     case "--pattern": request = ["kind": "pattern"]
     case "--camera": request = ["kind": "camera"]
     case "--qr": request = ["kind": "qr", "payload": need("a payload string")]
+    case "--code128": request = ["kind": "code128", "payload": need("a payload string")]
+    case "--ean": request = ["kind": "ean13", "payload": need("1–12 digits or a 13-digit EAN")]
     case "--image": request = ["kind": "image", "path": absolute(need("a file path"))]
     case "--video": request = ["kind": "video", "path": absolute(need("a file path"))]
     default:
@@ -144,6 +149,8 @@ case "set-source":
     switch flag {
     case "--pattern": cli.runSetSource(.testPattern)
     case "--qr": cli.runSetQR(payload: need("a payload string"))
+    case "--code128": cli.runSetBarcode(payload: need("a payload string"), symbology: .code128)
+    case "--ean": cli.runSetBarcode(payload: need("1–12 digits or a 13-digit EAN"), symbology: .ean13)
     case "--image": cli.runSetImage(path: need("a file path"))
     default:
         FileHandle.standardError.write(Data("error: \(flag) needs SimulatorCamera.app running\n".utf8))

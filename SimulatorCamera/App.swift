@@ -24,7 +24,7 @@ struct SimulatorCameraApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("SimulatorCamera") {
+        WindowGroup("SimulatorCameraEx") {
             MainView()
                 .environment(extensionController)
                 .environment(cameraLink)

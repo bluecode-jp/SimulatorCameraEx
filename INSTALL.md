@@ -37,6 +37,8 @@ simcamctl sim-enable --app host.exp.Exponent      # 対象を絞る場合（--ap
 
 1. Mac の SimulatorCamera アプリで映像ソースを選びます。
    - **QR Code**：文字を入力して **Generate**
+   - **Code 128**：文字（英数字・記号）を入力して **Generate**
+   - **EAN-13**：数字を入力して **Generate**。1〜12桁は先頭を0で埋めてチェックデジットを自動で付けます（例：`123456789` → `0001234567895`）。13桁はチェックデジットが正しいか確認します。
    - **Static Image**：**Browse…** で画像（バーコード画像など）を選び **Use**
    - **Video File**：**Browse…** で動画を選び **Use**
    - **Mac Camera**：Mac のカメラ映像
@@ -51,6 +53,8 @@ SimulatorCamera アプリを起動した状態で実行します。アプリの�
 
 ```bash
 simcamctl set-source --qr "https://example.com"          # QR コード
+simcamctl set-source --code128 "123456789"               # Code 128
+simcamctl set-source --ean 1234567890128                 # EAN-13（12桁なら検査数字を自動付与）
 simcamctl set-source --image ./barcodes/4570000011.png   # 画像（バーコード画像など）
 simcamctl set-source --video ./scan.mov                  # 動画（繰り返し再生）
 simcamctl set-source --camera                            # Mac のカメラ
@@ -59,7 +63,7 @@ simcamctl sim-orientation portrait                       # 縦 / landscape で�
 simcamctl status                                         # 現在のソースと接続中のアプリ数
 ```
 
-- アプリが起動していないと、`--qr` `--image` `--pattern` は Mac の仮想カメラにだけ届きます（シミュレータには届きません）。`--video` `--camera` `sim-orientation` はアプリが必要です。
+- アプリが起動していないと、`--qr` `--code128` `--ean` `--image` `--pattern` は Mac の仮想カメラにだけ届きます（シミュレータには届きません）。`--video` `--camera` `sim-orientation` はアプリが必要です。
 - 操作用の窓口は Mac 内（127.0.0.1:47848）からのみ受け付けます。
 
 ### 状態確認・解除

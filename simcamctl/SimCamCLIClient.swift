@@ -79,6 +79,16 @@ final class SimCamCLIClient {
         pushSingleFrame(frame, kind: .qrCode, description: "QR pushed (\(payload.count) chars)")
     }
 
+    func runSetBarcode(payload: String, symbology: BarcodeSymbology) {
+        guard let frame = BarcodeRenderer.render(payload: payload, symbology: symbology) else {
+            fail(symbology == .ean13
+                 ? "not a valid EAN-13: use 1–12 digits, or 13 digits with a correct check digit"
+                 : "Code 128 needs printable ASCII text", code: 3)
+        }
+        let shown = symbology == .ean13 ? BarcodeRenderer.ean13(from: payload) ?? payload : payload
+        pushSingleFrame(frame, kind: .image, description: "\(symbology == .ean13 ? "EAN-13" : "Code 128") pushed: \(shown)")
+    }
+
     func runSetImage(path: String) {
         let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
         guard FileManager.default.fileExists(atPath: url.path) else {
