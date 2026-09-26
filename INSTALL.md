@@ -41,7 +41,7 @@ simcamctl sim-enable --app host.exp.Exponent      # 対象を絞る場合（--ap
    - **EAN-13**：数字を入力して **Generate**。1〜12桁は先頭を0で埋めてチェックデジットを自動で付けます（例：`123456789` → `0001234567895`）。13桁はチェックデジットが正しいか確認します。
    - **Static Image**：**Browse…** で画像（バーコード画像など）を選び **Use**
    - **Video File**：**Browse…** で動画を選び **Use**
-   - **Mac Camera**：Mac のカメラ映像
+   - **Mac Camera**：Mac のカメラ映像。右のメニューで使うカメラを選べます（Automatic は内蔵・ディスプレイのカメラを優先。選択は次回起動時も保持）
    - **Test Pattern (Color Bar)**：動くカラーバー（シミュレータ・Mac の仮想カメラ共通）
 2. シミュレータ上のアプリでカメラ画面を開きます。
    - 画面下の「iOS Simulator apps: N」で、つながっているアプリの数を確認できます。
@@ -57,7 +57,9 @@ simcamctl set-source --code128 "123456789"               # Code 128
 simcamctl set-source --ean 1234567890128                 # EAN-13（12桁なら検査数字を自動付与）
 simcamctl set-source --image ./barcodes/4570000011.png   # 画像（バーコード画像など）
 simcamctl set-source --video ./scan.mov                  # 動画（繰り返し再生）
-simcamctl set-source --camera                            # Mac のカメラ
+simcamctl set-source --camera                            # Mac のカメラ（アプリで選択中のもの）
+simcamctl set-source --camera "USB"                      # 名前の一部（または ID）でカメラを指定
+simcamctl list-cameras                                   # カメラの一覧（* が選択中）
 simcamctl set-source --pattern                           # テストパターン
 simcamctl sim-orientation portrait                       # 縦 / landscape で横
 simcamctl status                                         # 現在のソースと接続中のアプリ数

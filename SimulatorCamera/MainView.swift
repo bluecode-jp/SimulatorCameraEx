@@ -7,6 +7,7 @@
 //  Run Diagnostics, frame counter.
 //
 
+import AVFoundation
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -16,6 +17,8 @@ struct MainView: View {
     @Environment(SourceManager.self) private var sourceManager
     @Environment(SimulatorAutoEnabler.self) private var simulatorAutoEnabler
     @State private var simulatorOrientation = SimulatorFeed.shared.orientation
+    /// Cameras for the Mac Camera picker, as (uniqueID, name).
+    @State private var cameras: [(id: String, name: String)] = []
     private static let contentSpace = "MainView.content"
 
     /// Window height last set by fitWindow; nil until the first fit.
@@ -172,7 +175,7 @@ struct MainView: View {
             Text("Source").font(.headline)
 
             sourceRow(.testPattern, icon: "tv", title: "Test Pattern (Color Bar)", subtitle: "Moving colour bars, built in. No setup.")
-            sourceRow(.macCamera, icon: "camera.fill", title: "Mac Camera", subtitle: "Live webcam. First use prompts for camera access.")
+            macCameraRow
 
             Divider()
 
@@ -210,11 +213,49 @@ struct MainView: View {
         .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 
+    /// Mac Camera row plus a picker for which camera to use; changing it
+    /// while the camera is live switches immediately.
+    private var macCameraRow: some View {
+        @Bindable var sm = sourceManager
+        return HStack(spacing: 10) {
+            sourceRow(.macCamera, icon: "camera.fill", title: "Mac Camera",
+                      subtitle: "Live webcam. First use prompts for camera access.",
+                      showsCheckmark: false)
+            Picker("Camera", selection: $sm.selectedCameraID) {
+                Text("Automatic").tag(String?.none)
+                ForEach(cameras, id: \.id) { camera in
+                    Text(camera.name).tag(Optional(camera.id))
+                }
+            }
+            .labelsHidden()
+            .fixedSize()
+            .onChange(of: sourceManager.selectedCameraID) { _, _ in
+                if sourceManager.activeKind == .macCamera { switchSource(.macCamera) }
+            }
+            if sourceManager.activeKind == .macCamera {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint)
+            }
+        }
+        .onAppear(perform: reloadCameras)
+        .onReceive(NotificationCenter.default.publisher(for: AVCaptureDevice.wasConnectedNotification)) { _ in reloadCameras() }
+        .onReceive(NotificationCenter.default.publisher(for: AVCaptureDevice.wasDisconnectedNotification)) { _ in reloadCameras() }
+    }
+
+    private func reloadCameras() {
+        var list = MacCameraSource.cameraList()
+        // Keep a remembered camera selectable while it is unplugged.
+        if let id = sourceManager.selectedCameraID, !list.contains(where: { $0.id == id }) {
+            list.append((id: id, name: "Unavailable camera"))
+        }
+        cameras = list
+    }
+
     private func sourceRow(
         _ kind: SimCamSourceKind,
         icon: String,
         title: String,
-        subtitle: String
+        subtitle: String,
+        showsCheckmark: Bool = true
     ) -> some View {
         let isActive = sourceManager.activeKind == kind
         return Button {
@@ -230,11 +271,12 @@ struct MainView: View {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if isActive {
+                if isActive && showsCheckmark {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint)
                 }
             }
             .padding(.vertical, 4)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

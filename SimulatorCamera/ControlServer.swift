@@ -9,7 +9,8 @@
 //  Loopback only (127.0.0.1:kSimCamControlPort). One JSON object per line:
 //
 //    {"command":"set-source","kind":"pattern"}
-//    {"command":"set-source","kind":"camera"}
+//    {"command":"set-source","kind":"camera"[,"device":"NAME or uniqueID"]}
+//    {"command":"list-cameras"}
 //    {"command":"set-source","kind":"qr","payload":"TEXT"}
 //    {"command":"set-source","kind":"code128","payload":"TEXT"}
 //    {"command":"set-source","kind":"ean13","payload":"123456789"}
@@ -123,6 +124,12 @@ final class ControlServer {
         case "set-source":
             return await setSource(request, sourceManager)
 
+        case "list-cameras":
+            let selected = sourceManager.selectedCameraID
+            return ["ok": true, "cameras": MacCameraSource.cameraList().map {
+                ["id": $0.id, "name": $0.name, "selected": $0.id == selected]
+            }]
+
         default:
             return ["ok": false, "error": "unknown command \(command)"]
         }
@@ -134,6 +141,13 @@ final class ControlServer {
         case "pattern":
             kind = .testPattern
         case "camera":
+            if let query = request["device"] as? String, !query.isEmpty {
+                guard let device = MacCameraSource.camera(matching: query) else {
+                    let names = MacCameraSource.cameraList().map(\.name).joined(separator: ", ")
+                    return ["ok": false, "error": "no camera matches \"\(query)\" (available: \(names))"]
+                }
+                sourceManager.selectedCameraID = device.uniqueID
+            }
             kind = .macCamera
         case "qr":
             guard let payload = request["payload"] as? String, !payload.isEmpty else {

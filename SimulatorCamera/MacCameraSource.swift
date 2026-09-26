@@ -30,6 +30,48 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
     private let normalizer = FrameNormalizer()
     private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "mac-camera")
 
+    /// uniqueID of the camera to open; nil (or unplugged) picks the default.
+    private let deviceID: String?
+
+    init(deviceID: String? = nil) {
+        self.deviceID = deviceID
+        super.init()
+    }
+
+    /// Cameras the source can open, in discovery order. Never includes our
+    /// own virtual camera: that would feed the extension its own output.
+    static func availableCameras() -> [AVCaptureDevice] {
+        AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera, .external, .continuityCamera],
+            mediaType: .video,
+            position: .unspecified
+        ).devices.filter { $0.localizedName != kSimCamDeviceName }
+    }
+
+    /// (uniqueID, display name) for pickers and simcamctl; cameras sharing a
+    /// name (e.g. two Studio Displays) get " (1)", " (2)" so they differ.
+    static func cameraList() -> [(id: String, name: String)] {
+        let cameras = availableCameras()
+        var seen: [String: Int] = [:]
+        let totals = Dictionary(grouping: cameras, by: \.localizedName).mapValues(\.count)
+        return cameras.map { camera in
+            let name = camera.localizedName
+            guard totals[name, default: 0] > 1 else { return (camera.uniqueID, name) }
+            seen[name, default: 0] += 1
+            return (camera.uniqueID, "\(name) (\(seen[name]!))")
+        }
+    }
+
+    /// Camera whose uniqueID equals `query`, else the first whose name
+    /// contains it (case-insensitive). For simcamctl --camera NAME.
+    static func camera(matching query: String) -> AVCaptureDevice? {
+        let cameras = availableCameras()
+        if let exact = cameras.first(where: { $0.uniqueID == query }) { return exact }
+        // Match the display names from cameraList(), so "(2)" picks the second.
+        guard let id = cameraList().first(where: { $0.name.localizedCaseInsensitiveContains(query) })?.id else { return nil }
+        return cameras.first { $0.uniqueID == id }
+    }
+
     /// Set by stop(). Checked after startRunning so a stop that races the
     /// (slow) session start still wins and the camera light goes off.
     private var isStopped = false
@@ -70,16 +112,15 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
             session.sessionPreset = .hd1280x720
         }
 
-        // Never pick our own virtual camera as the input: that would feed the
-        // extension its own output in a loop.
-        let discovery = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera, .external, .continuityCamera],
-            mediaType: .video,
-            position: .unspecified
-        )
-        let candidates = discovery.devices.filter { $0.localizedName != kSimCamDeviceName }
-        guard let device = candidates.first(where: { $0.deviceType == .builtInWideAngleCamera }) ?? candidates.first else {
+        let candidates = Self.availableCameras()
+        let chosen = deviceID.flatMap { id in candidates.first { $0.uniqueID == id } }
+        guard let device = chosen
+                ?? candidates.first(where: { $0.deviceType == .builtInWideAngleCamera })
+                ?? candidates.first else {
             throw FrameSourceError.noDevice
+        }
+        if deviceID != nil, chosen == nil {
+            log.info("selected camera is not connected; using \(device.localizedName, privacy: .public)")
         }
 
         let input = try AVCaptureDeviceInput(device: device)

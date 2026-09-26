@@ -43,6 +43,11 @@ final class SourceManager {
     var selectedFileURL: URL?
     var selectedImageURL: URL?
     var qrPayload: String = "https://www.bluecode.co.jp"
+    /// uniqueID of the Mac camera to use; nil = automatic (built-in first).
+    /// Remembered across launches.
+    var selectedCameraID: String? = UserDefaults.standard.string(forKey: "selectedCameraID") {
+        didSet { UserDefaults.standard.set(selectedCameraID, forKey: "selectedCameraID") }
+    }
     var code128Payload: String = "123456789"
     /// 1–12 digits get zero-padded and a check digit; see BarcodeRenderer.ean13.
     var ean13Payload: String = "1234567890128"
@@ -83,7 +88,7 @@ final class SourceManager {
         case .testPattern:
             return
         case .macCamera:
-            source = MacCameraSource()
+            source = MacCameraSource(deviceID: selectedCameraID)
         case .videoFile:
             guard let url = selectedFileURL else { throw SwitchError.noFileSelected }
             source = VideoFileSource(url: url)

@@ -36,7 +36,9 @@ func usage() -> Never {
                                    zero-padded + check digit; or all 13 digits)
       set-source --image PATH      Stream a static PNG/JPG file
       set-source --video PATH      Stream a video file (loops)       [needs the app]
-      set-source --camera          Stream the Mac's camera           [needs the app]
+      set-source --camera [NAME]   Stream a Mac camera (NAME = part of its name
+                                   or its ID, see list-cameras)      [needs the app]
+      list-cameras                 List Mac cameras (* = selected)   [needs the app]
                                    With SimulatorCamera.app running, set-source goes
                                    through the app and reaches iOS Simulator apps too.
 
@@ -98,6 +100,18 @@ case "status":
     }
     cli.runStatus()
 
+case "list-cameras":
+    guard let reply = AppControl.request(["command": "list-cameras"]), reply["ok"] as? Bool == true,
+          let cameras = reply["cameras"] as? [[String: Any]] else {
+        FileHandle.standardError.write(Data("error: SimulatorCamera.app is not running\n".utf8))
+        exit(1)
+    }
+    for camera in cameras {
+        let mark = camera["selected"] as? Bool == true ? "*" : " "
+        print("\(mark) \(camera["name"] ?? "?")    \(camera["id"] ?? "")")
+    }
+    exit(0)
+
 case "sim-orientation":
     guard args.count >= 3, ["portrait", "landscape"].contains(args[2]) else {
         FileHandle.standardError.write(Data("error: usage: \(progName) sim-orientation portrait|landscape\n".utf8))
@@ -131,7 +145,10 @@ case "set-source":
     let request: [String: Any]
     switch flag {
     case "--pattern": request = ["kind": "pattern"]
-    case "--camera": request = ["kind": "camera"]
+    case "--camera":
+        // Optional camera: `--camera "USB"` (name part or uniqueID); bare
+        // `--camera` keeps the app's current choice.
+        request = value.map { ["kind": "camera", "device": $0] } ?? ["kind": "camera"]
     case "--qr": request = ["kind": "qr", "payload": need("a payload string")]
     case "--code128": request = ["kind": "code128", "payload": need("a payload string")]
     case "--ean": request = ["kind": "ean13", "payload": need("1–12 digits or a 13-digit EAN")]
