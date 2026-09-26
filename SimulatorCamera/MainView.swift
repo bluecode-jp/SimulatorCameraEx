@@ -229,8 +229,11 @@ struct MainView: View {
             }
             .labelsHidden()
             .fixedSize()
-            .onChange(of: sourceManager.selectedCameraID) { _, _ in
-                if sourceManager.activeKind == .macCamera { switchSource(.macCamera) }
+            .onChange(of: sourceManager.selectedCameraID) { _, id in
+                // simcamctl --camera sets the ID and restarts the source itself.
+                if sourceManager.activeKind == .macCamera, id != sourceManager.activeCameraID {
+                    switchSource(.macCamera)
+                }
             }
             if sourceManager.activeKind == .macCamera {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint)

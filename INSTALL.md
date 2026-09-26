@@ -11,11 +11,12 @@ iOS シミュレータ上のアプリにカメラ映像を渡す Mac アプリ�
 
 1. `SimulatorCamera-<version>.dmg` を開き、`SimulatorCamera.app` を **/Applications** にコピーします。
 2. `/Applications/SimulatorCamera.app` を起動します。
-3. （任意）`simcamctl` をパスの通った場所に置くと、コマンドが短く書けます。
+3. （任意）`simcamctl` はアプリの中（`/Applications/SimulatorCamera.app/Contents/MacOS/simcamctl`）にあります。`simcamctl` だけで実行できるようにするには、PATH の通った場所にリンクを作ります（`~/.local/bin` が PATH に入っている場合。sudo 不要）。
    ```bash
-   sudo ln -s /Applications/SimulatorCamera.app/Contents/MacOS/simcamctl /usr/local/bin/simcamctl
+   mkdir -p ~/.local/bin
+   ln -sf /Applications/SimulatorCamera.app/Contents/MacOS/simcamctl ~/.local/bin/simcamctl
    ```
-   以下の例は、このリンクを作った前提で `simcamctl` と書いています。
+   リンクなので、アプリを更新すれば `simcamctl` も新しくなります。以下の例は、このリンクを作った前提で `simcamctl` と書いています（作らない場合はフルパスで実行してください）。
 
 ## iOS シミュレータで使う
 
@@ -103,4 +104,4 @@ Mac の仮想カメラ「SimulatorCamera Virtual」としても使えます（Zo
 
 1. 仮想カメラを有効にしていた場合は、SimulatorCamera アプリで **Deactivate** をクリックします。
 2. シミュレータで有効化していた場合は `simcamctl sim-disable` を実行します（またはシミュレータを再起動）。
-3. `/Applications/SimulatorCamera.app` と、作成した場合は `/usr/local/bin/simcamctl` を削除します。
+3. `/Applications/SimulatorCamera.app` と、作成した場合は `~/.local/bin/simcamctl` を削除します。

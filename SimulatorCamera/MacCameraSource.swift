@@ -53,13 +53,21 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
     static func cameraList() -> [(id: String, name: String)] {
         let cameras = availableCameras()
         var seen: [String: Int] = [:]
-        let totals = Dictionary(grouping: cameras, by: \.localizedName).mapValues(\.count)
+        let totals = Dictionary(grouping: cameras, by: displayName).mapValues(\.count)
         return cameras.map { camera in
-            let name = camera.localizedName
+            let name = displayName(camera)
             guard totals[name, default: 0] > 1 else { return (camera.uniqueID, name) }
             seen[name, default: 0] += 1
             return (camera.uniqueID, "\(name) (\(seen[name]!))")
         }
+    }
+
+    /// localizedName without invisible direction marks (Continuity Camera
+    /// names start with U+200E) or surrounding spaces.
+    private static func displayName(_ camera: AVCaptureDevice) -> String {
+        camera.localizedName
+            .filter { !["\u{200E}", "\u{200F}", "\u{202A}", "\u{202C}"].contains($0) }
+            .trimmingCharacters(in: .whitespaces)
     }
 
     /// Camera whose uniqueID equals `query`, else the first whose name

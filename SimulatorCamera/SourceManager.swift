@@ -48,6 +48,9 @@ final class SourceManager {
     var selectedCameraID: String? = UserDefaults.standard.string(forKey: "selectedCameraID") {
         didSet { UserDefaults.standard.set(selectedCameraID, forKey: "selectedCameraID") }
     }
+    /// Camera the running Mac Camera source was started with, so a picker
+    /// change that simcamctl already applied does not restart it again.
+    private(set) var activeCameraID: String?
     var code128Payload: String = "123456789"
     /// 1–12 digits get zero-padded and a check digit; see BarcodeRenderer.ean13.
     var ean13Payload: String = "1234567890128"
@@ -88,6 +91,7 @@ final class SourceManager {
         case .testPattern:
             return
         case .macCamera:
+            activeCameraID = selectedCameraID
             source = MacCameraSource(deviceID: selectedCameraID)
         case .videoFile:
             guard let url = selectedFileURL else { throw SwitchError.noFileSelected }
