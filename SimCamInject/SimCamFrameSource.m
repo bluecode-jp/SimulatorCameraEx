@@ -19,8 +19,10 @@
 #import <sys/socket.h>
 #import <unistd.h>
 
-static const size_t kWidth = 1280;
-static const size_t kHeight = 720;
+// Test pattern shape: portrait, like the Mac app's default simulator feed.
+static const size_t kPatternWidth = 720;
+static const size_t kPatternHeight = 1280;
+static const uint32_t kMaxSide = 4096;
 static const uint16_t kDefaultPort = 47847;  // kSimCamFeedPort
 static const double kStaleAfterSeconds = 1.0;
 
@@ -31,19 +33,35 @@ static os_log_t SCSourceLog(void) {
     return log;
 }
 
-static CVPixelBufferPoolRef SCPool(void) {
-    static CVPixelBufferPoolRef pool;
+/// Pool for one frame size; recreated when the size changes (orientation
+/// switched in the Mac app). Called from one thread at a time per caller.
+static CVPixelBufferPoolRef SCPool(size_t width, size_t height) {
+    static NSObject *lock;
+    static NSMutableDictionary<NSString *, id> *pools;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
-        NSDictionary *attrs = @{
-            (id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA),
-            (id)kCVPixelBufferWidthKey: @(kWidth),
-            (id)kCVPixelBufferHeightKey: @(kHeight),
-            (id)kCVPixelBufferIOSurfacePropertiesKey: @{},
-        };
-        CVPixelBufferPoolCreate(kCFAllocatorDefault, NULL, (CFDictionaryRef)attrs, &pool);
+        lock = [NSObject new];
+        pools = [NSMutableDictionary new];
     });
-    return pool;
+    NSString *key = [NSString stringWithFormat:@"%zux%zu", width, height];
+    @synchronized (lock) {
+        id pool = pools[key];
+        if (!pool) {
+            NSDictionary *attrs = @{
+                (id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA),
+                (id)kCVPixelBufferWidthKey: @(width),
+                (id)kCVPixelBufferHeightKey: @(height),
+                (id)kCVPixelBufferIOSurfacePropertiesKey: @{},
+            };
+            CVPixelBufferPoolRef created = NULL;
+            CVPixelBufferPoolCreate(kCFAllocatorDefault, NULL, (CFDictionaryRef)attrs, &created);
+            if (!created) return NULL;
+            pool = (id)created;
+            pools[key] = pool;
+            CFRelease(created);
+        }
+        return (CVPixelBufferPoolRef)pool;
+    }
 }
 
 // MARK: - Test pattern
@@ -52,7 +70,7 @@ static CVPixelBufferPoolRef SCPool(void) {
 static CVPixelBufferRef SCCopyTestPattern(void) {
     static uint64_t tick;
     CVPixelBufferRef pb = NULL;
-    if (CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, SCPool(), &pb) != kCVReturnSuccess) return NULL;
+    if (CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, SCPool(kPatternWidth, kPatternHeight), &pb) != kCVReturnSuccess) return NULL;
     static const uint8_t bars[8][3] = { // BGR
         {255, 255, 255}, {0, 255, 255}, {255, 255, 0}, {0, 255, 0},
         {255, 0, 255}, {0, 0, 255}, {255, 0, 0}, {0, 0, 0},
@@ -60,12 +78,12 @@ static CVPixelBufferRef SCCopyTestPattern(void) {
     CVPixelBufferLockBaseAddress(pb, 0);
     uint8_t *base = CVPixelBufferGetBaseAddress(pb);
     size_t stride = CVPixelBufferGetBytesPerRow(pb);
-    size_t band = (tick * 8) % kHeight;
-    for (size_t y = 0; y < kHeight; y++) {
+    size_t band = (tick * 8) % kPatternHeight;
+    for (size_t y = 0; y < kPatternHeight; y++) {
         uint32_t *row = (uint32_t *)(base + y * stride);
         BOOL inBand = y >= band && y < band + 24;
-        for (size_t x = 0; x < kWidth; x++) {
-            const uint8_t *c = bars[x * 8 / kWidth];
+        for (size_t x = 0; x < kPatternWidth; x++) {
+            const uint8_t *c = bars[x * 8 / kPatternWidth];
             row[x] = inBand ? 0xFFFFFFFF : (0xFF000000u | (uint32_t)c[2] << 16 | (uint32_t)c[1] << 8 | c[0]);
         }
     }
@@ -124,7 +142,8 @@ static uint64_t SCReadFrames(int fd) {
             uint32_t srcStride = CFSwapInt32LittleToHost(header[3]);
             uint32_t metaLength = CFSwapInt32LittleToHost(header[4]);
             size_t pixelBytes = (size_t)height * srcStride;
-            if (width == 0 || height == 0 || srcStride < width * 4 || pixelBytes > 64u << 20 || metaLength > 1u << 20) {
+            if (width == 0 || height == 0 || width > kMaxSide || height > kMaxSide ||
+                srcStride < width * 4 || pixelBytes > 64u << 20 || metaLength > 1u << 20) {
                 os_log_error(SCSourceLog(), "bad frame header %ux%u stride %u", width, height, srcStride);
                 return count;
             }
@@ -133,16 +152,15 @@ static uint64_t SCReadFrames(int fd) {
             NSMutableData *meta = [NSMutableData dataWithLength:metaLength];
             if (metaLength && !SCReadFully(fd, meta.mutableBytes, metaLength)) return count;
 
-            // Frames are canonical 1280x720; anything else is dropped rather
-            // than scaled, the Mac app normalizes every source already.
-            if (width != kWidth || height != kHeight) continue;
+            // Any size: the Mac app sends landscape 1280x720 or portrait
+            // 720x1280 depending on its orientation setting.
             CVPixelBufferRef pb = NULL;
-            if (CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, SCPool(), &pb) != kCVReturnSuccess) continue;
+            if (CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, SCPool(width, height), &pb) != kCVReturnSuccess) continue;
             CVPixelBufferLockBaseAddress(pb, 0);
             uint8_t *dst = CVPixelBufferGetBaseAddress(pb);
             size_t dstStride = CVPixelBufferGetBytesPerRow(pb);
             const uint8_t *src = scratch.bytes;
-            for (size_t y = 0; y < kHeight; y++) memcpy(dst + y * dstStride, src + y * srcStride, kWidth * 4);
+            for (size_t y = 0; y < height; y++) memcpy(dst + y * dstStride, src + y * srcStride, (size_t)width * 4);
             CVPixelBufferUnlockBaseAddress(pb, 0);
 
             @synchronized (gFeedLock) {

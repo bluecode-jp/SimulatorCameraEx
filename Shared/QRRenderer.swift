@@ -16,7 +16,7 @@ public enum QRRenderer {
     public static let qrSide: CGFloat = 600
 
     /// Nil when Core Image cannot encode the payload (empty or too long).
-    public static func render(payload: String) -> CVPixelBuffer? {
+    public static func render(payload: String, size: CGSize = FrameRaster.canonicalSize) -> CVPixelBuffer? {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(payload.utf8)
         filter.correctionLevel = "M"
@@ -29,10 +29,10 @@ public enum QRRenderer {
         ))
         let context = CIContext(options: [.cacheIntermediates: false])
         guard let qrCG = context.createCGImage(scaled, from: scaled.extent) else { return nil }
-        return FrameRaster.render(background: CGColor(red: 1, green: 1, blue: 1, alpha: 1)) { ctx in
+        return FrameRaster.render(size: size, background: CGColor(red: 1, green: 1, blue: 1, alpha: 1)) { ctx in
             let rect = CGRect(
-                x: (CGFloat(kSimCamFrameWidth) - qrSide) / 2,
-                y: (CGFloat(kSimCamFrameHeight) - qrSide) / 2,
+                x: (size.width - qrSide) / 2,
+                y: (size.height - qrSide) / 2,
                 width: qrSide, height: qrSide
             )
             ctx.interpolationQuality = .none

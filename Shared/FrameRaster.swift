@@ -31,45 +31,55 @@ public enum FrameRaster {
         return CGRect(x: (bounds.width - w) / 2, y: (bounds.height - h) / 2, width: w, height: h)
     }
 
+    /// Canonical frame size (what the CMIO extension accepts).
+    public static let canonicalSize = CGSize(width: kSimCamFrameWidth, height: kSimCamFrameHeight)
+
+    /// Portrait frame size for iOS Simulator apps (SimulatorFeed): the
+    /// canonical frame turned on its side, like an iPhone held upright.
+    public static let portraitSize = CGSize(width: kSimCamFrameHeight, height: kSimCamFrameWidth)
+
     /// Pixel-buffer attributes every canonical buffer is created with.
-    public static var pixelBufferAttributes: [CFString: Any] {
+    public static var pixelBufferAttributes: [CFString: Any] { pixelBufferAttributes(size: canonicalSize) }
+
+    public static func pixelBufferAttributes(size: CGSize) -> [CFString: Any] {
         [
-            kCVPixelBufferWidthKey: kSimCamFrameWidth,
-            kCVPixelBufferHeightKey: kSimCamFrameHeight,
+            kCVPixelBufferWidthKey: Int(size.width),
+            kCVPixelBufferHeightKey: Int(size.height),
             kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,
             kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary,
             kCVPixelBufferCGBitmapContextCompatibilityKey: true,
         ]
     }
 
-    /// A fresh, IOSurface-backed canonical pixel buffer.
-    public static func makePixelBuffer() -> CVPixelBuffer? {
+    /// A fresh, IOSurface-backed pixel buffer (canonical size by default).
+    public static func makePixelBuffer(size: CGSize = canonicalSize) -> CVPixelBuffer? {
         var pb: CVPixelBuffer?
         let status = CVPixelBufferCreate(
             kCFAllocatorDefault,
-            kSimCamFrameWidth,
-            kSimCamFrameHeight,
+            Int(size.width),
+            Int(size.height),
             kCVPixelFormatType_32BGRA,
-            pixelBufferAttributes as CFDictionary,
+            pixelBufferAttributes(size: size) as CFDictionary,
             &pb
         )
         return status == kCVReturnSuccess ? pb : nil
     }
 
     /// A pool of canonical pixel buffers for sources that emit continuously.
-    public static func makePool() -> CVPixelBufferPool? {
+    public static func makePool(size: CGSize = canonicalSize) -> CVPixelBufferPool? {
         var pool: CVPixelBufferPool?
-        CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, pixelBufferAttributes as CFDictionary, &pool)
+        CVPixelBufferPoolCreate(kCFAllocatorDefault, nil, pixelBufferAttributes(size: size) as CFDictionary, &pool)
         return pool
     }
 
     /// Render a canonical frame. `draw` receives a context already filled
     /// with `background`; origin is bottom-left (CoreGraphics).
     public static func render(
+        size: CGSize = canonicalSize,
         background: CGColor,
         draw: (CGContext) -> Void
     ) -> CVPixelBuffer? {
-        guard let pb = makePixelBuffer() else { return nil }
+        guard let pb = makePixelBuffer(size: size) else { return nil }
         CVPixelBufferLockBaseAddress(pb, [])
         defer { CVPixelBufferUnlockBaseAddress(pb, []) }
         guard let base = CVPixelBufferGetBaseAddress(pb) else { return nil }
@@ -77,8 +87,8 @@ public enum FrameRaster {
             | CGBitmapInfo.byteOrder32Little.rawValue
         guard let ctx = CGContext(
             data: base,
-            width: kSimCamFrameWidth,
-            height: kSimCamFrameHeight,
+            width: Int(size.width),
+            height: Int(size.height),
             bitsPerComponent: 8,
             bytesPerRow: CVPixelBufferGetBytesPerRow(pb),
             space: CGColorSpaceCreateDeviceRGB(),
@@ -87,15 +97,15 @@ public enum FrameRaster {
             return nil
         }
         ctx.setFillColor(background)
-        ctx.fill(CGRect(x: 0, y: 0, width: kSimCamFrameWidth, height: kSimCamFrameHeight))
+        ctx.fill(CGRect(origin: .zero, size: size))
         draw(ctx)
         return pb
     }
 
     /// Aspect-fit `image` on `background` into a canonical pixel buffer.
-    public static func render(image: CGImage, background: CGColor) -> CVPixelBuffer? {
-        render(background: background) { ctx in
-            let rect = aspectFitRect(for: CGSize(width: image.width, height: image.height))
+    public static func render(image: CGImage, background: CGColor, size: CGSize = canonicalSize) -> CVPixelBuffer? {
+        render(size: size, background: background) { ctx in
+            let rect = aspectFitRect(for: CGSize(width: image.width, height: image.height), in: size)
             ctx.interpolationQuality = .high
             ctx.draw(image, in: rect)
         }

@@ -19,6 +19,7 @@ final class VideoFileSource: FrameSource {
 
     let kind: SimCamSourceKind = .videoFile
     var onFrame: ((CVPixelBuffer) -> Void)?
+    var onFeedFrame: ((CVPixelBuffer) -> Void)?
 
     private let url: URL
     private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "video-file")
@@ -51,6 +52,7 @@ final class VideoFileSource: FrameSource {
         task?.cancel()
         task = nil
         onFrame = nil
+        onFeedFrame = nil
         log.info("VideoFileSource stopped")
     }
 
@@ -121,6 +123,11 @@ final class VideoFileSource: FrameSource {
 
                 if let frame = normalizer.canonicalize(pb, transform: track.transform) {
                     onFrame?(frame)
+                    if let onFeedFrame, let feed = SimulatorFeed.shared.frame(from: frame, render: { size in
+                        normalizer.canonicalize(pb, transform: track.transform, size: size)
+                    }) {
+                        onFeedFrame(feed)
+                    }
                 }
 
                 // Pace against the wall clock using the sample's own PTS so

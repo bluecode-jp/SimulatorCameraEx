@@ -16,6 +16,7 @@ final class QRSource: FrameSource {
 
     let kind: SimCamSourceKind = .qrCode
     var onFrame: ((CVPixelBuffer) -> Void)?
+    var onFeedFrame: ((CVPixelBuffer) -> Void)?
 
     private let payload: String
     private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "qr")
@@ -44,13 +45,23 @@ final class QRSource: FrameSource {
         task?.cancel()
         task = nil
         onFrame = nil
+        onFeedFrame = nil
     }
 
     private func tickLoop(_ frame: CVPixelBuffer) async {
         let interval = Duration.seconds(1.0 / Double(kSimCamFrameRate))
         var next = ContinuousClock.now
+        var feedFrames: [String: CVPixelBuffer] = [:]  // keyed by "WxH"
+        let payload = self.payload
         while !Task.isCancelled {
             onFrame?(frame)
+            if let onFeedFrame, let feed = SimulatorFeed.shared.frame(from: frame, render: { size in
+                let key = "\(Int(size.width))x\(Int(size.height))"
+                if feedFrames[key] == nil { feedFrames[key] = QRRenderer.render(payload: payload, size: size) }
+                return feedFrames[key]
+            }) {
+                onFeedFrame(feed)
+            }
             next += interval
             try? await Task.sleep(until: next, clock: .continuous)
         }

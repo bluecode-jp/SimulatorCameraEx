@@ -31,6 +31,11 @@ protocol FrameSource: AnyObject {
     /// Hook the SourceManager registers. Called on a background queue with
     /// a canonical pixel buffer.
     var onFrame: ((CVPixelBuffer) -> Void)? { get set }
+
+    /// Frames for iOS Simulator apps, shaped per SimulatorFeed.orientation
+    /// (portrait by default). Called right after onFrame, only while a
+    /// simulator app is connected.
+    var onFeedFrame: ((CVPixelBuffer) -> Void)? { get set }
 }
 
 /// Errors a source can throw on start.
@@ -56,21 +61,25 @@ enum FrameSourceError: LocalizedError {
 final class FrameNormalizer {
 
     private let context = CIContext(options: [.cacheIntermediates: false])
-    private let pool = FrameRaster.makePool()
-    private let canonicalExtent = CGRect(
-        x: 0, y: 0,
-        width: kSimCamFrameWidth, height: kSimCamFrameHeight
-    )
+    private let poolLock = NSLock()
+    private var pools: [String: CVPixelBufferPool] = [:]
 
-    /// Return a canonical pixel buffer for `pixelBuffer`. `transform` is
-    /// applied first (video preferredTransform); the result is aspect-fit
-    /// onto a black canonical canvas. Already-canonical BGRA buffers are
+    /// Return a pixel buffer of `size` (canonical by default) for
+    /// `pixelBuffer`. `transform` is applied first (video preferredTransform);
+    /// the result is aspect-fit (or, with `fill`, aspect-filled and cropped)
+    /// onto a black canvas. Buffers already in the requested shape are
     /// returned as-is (zero copy).
     func canonicalize(
         _ pixelBuffer: CVPixelBuffer,
-        transform: CGAffineTransform = .identity
+        transform: CGAffineTransform = .identity,
+        size: CGSize = FrameRaster.canonicalSize,
+        fill: Bool = false
     ) -> CVPixelBuffer? {
-        if transform.isIdentity, SimCamFrameCheck.problem(with: pixelBuffer) == nil {
+        let canvas = CGRect(origin: .zero, size: size)
+        if transform.isIdentity,
+           CVPixelBufferGetPixelFormatType(pixelBuffer) == kCVPixelFormatType_32BGRA,
+           CVPixelBufferGetWidth(pixelBuffer) == Int(size.width),
+           CVPixelBufferGetHeight(pixelBuffer) == Int(size.height) {
             return pixelBuffer
         }
 
@@ -93,30 +102,39 @@ final class FrameNormalizer {
             ))
         }
 
-        let fit = FrameRaster.aspectFitRect(for: image.extent.size)
-        let scale = fit.width / max(image.extent.width, 1)
+        let extent = image.extent.size
+        let scale = fill
+            ? max(size.width / max(extent.width, 1), size.height / max(extent.height, 1))
+            : min(size.width / max(extent.width, 1), size.height / max(extent.height, 1))
+        let origin = CGPoint(x: (size.width - extent.width * scale) / 2,
+                             y: (size.height - extent.height * scale) / 2)
         image = image
             .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-            .transformed(by: CGAffineTransform(translationX: fit.origin.x, y: fit.origin.y))
+            .transformed(by: CGAffineTransform(translationX: origin.x, y: origin.y))
 
-        guard let dst = dequeue() else { return nil }
+        guard let dst = dequeue(size: size) else { return nil }
         // Clear to black first so letterbox bars are deterministic.
         context.render(
-            CIImage(color: .black).cropped(to: canonicalExtent),
+            CIImage(color: .black).cropped(to: canvas),
             to: dst,
-            bounds: canonicalExtent,
+            bounds: canvas,
             colorSpace: CGColorSpaceCreateDeviceRGB()
         )
         context.render(
-            image.cropped(to: canonicalExtent),
+            image.cropped(to: canvas),
             to: dst,
-            bounds: canonicalExtent,
+            bounds: canvas,
             colorSpace: CGColorSpaceCreateDeviceRGB()
         )
         return dst
     }
 
-    private func dequeue() -> CVPixelBuffer? {
+    private func dequeue(size: CGSize) -> CVPixelBuffer? {
+        let key = "\(Int(size.width))x\(Int(size.height))"
+        poolLock.lock()
+        if pools[key] == nil { pools[key] = FrameRaster.makePool(size: size) }
+        let pool = pools[key]
+        poolLock.unlock()
         guard let pool else { return nil }
         var pb: CVPixelBuffer?
         let status = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pb)

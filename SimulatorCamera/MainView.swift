@@ -15,6 +15,7 @@ struct MainView: View {
     @Environment(CameraLink.self) private var link
     @Environment(SourceManager.self) private var sourceManager
     @Environment(SimulatorAutoEnabler.self) private var simulatorAutoEnabler
+    @State private var simulatorOrientation = SimulatorFeed.shared.orientation
 
     var body: some View {
         ScrollView {
@@ -80,6 +81,23 @@ struct MainView: View {
             Text("iOS Simulator").font(.headline)
             Toggle("Enable the camera in iOS Simulators automatically when they boot", isOn: $auto.isEnabled)
                 .font(.callout)
+            HStack {
+                Text("Frame orientation").font(.callout)
+                Picker("Frame orientation", selection: $simulatorOrientation) {
+                    Text("Portrait 720×1280").tag(SimulatorFeed.Orientation.portrait)
+                    Text("Landscape 1280×720").tag(SimulatorFeed.Orientation.landscape)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
+                .onChange(of: simulatorOrientation) { _, value in
+                    SimulatorFeed.shared.orientation = value
+                }
+            }
+            Text("Portrait fills an upright iPhone camera view; landscape suits apps that rotate the camera. The Mac virtual camera always gets landscape.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Text(simulatorStatusText)
                 .font(.caption)
                 .foregroundStyle(.secondary)

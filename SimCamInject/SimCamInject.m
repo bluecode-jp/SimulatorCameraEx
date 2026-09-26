@@ -255,17 +255,18 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
 
 // MARK: - Fake barcode
 
-/// Aspect-fit/fill mapping of a normalized image point into a preview layer.
-static CGPoint SCLayerPoint(AVCaptureVideoPreviewLayer *layer, CGPoint p) {
+/// Aspect-fit/fill mapping of a normalized point in a `frame`-sized image
+/// into a preview layer.
+static CGPoint SCLayerPoint(AVCaptureVideoPreviewLayer *layer, CGSize frame, CGPoint p) {
     CGSize size = layer.bounds.size;
-    CGFloat sx = size.width / 1280.0, sy = size.height / 720.0;
+    CGFloat sx = size.width / frame.width, sy = size.height / frame.height;
     NSString *gravity = layer.videoGravity;
     CGFloat w, h;
     if ([gravity isEqualToString:AVLayerVideoGravityResize]) {
         w = size.width; h = size.height;
     } else {
         CGFloat scale = [gravity isEqualToString:AVLayerVideoGravityResizeAspectFill] ? MAX(sx, sy) : MIN(sx, sy);
-        w = 1280.0 * scale; h = 720.0 * scale;
+        w = frame.width * scale; h = frame.height * scale;
     }
     return CGPointMake((size.width - w) / 2 + p.x * w, (size.height - h) / 2 + p.y * h);
 }
@@ -280,11 +281,14 @@ static CGPoint SCLayerPoint(AVCaptureVideoPreviewLayer *layer, CGPoint p) {
     CGRect _bounds;
     NSArray *_corners;   // CGPoint dictionaries, like AVFoundation's
     CMTime _time;
+    CGSize _frameSize;   // pixel size of the frame the code was found in
 }
 
 + (SCCodeObject *)codeWithType:(AVMetadataObjectType)type value:(NSString *)value
-                        bounds:(CGRect)bounds corners:(NSArray *)corners time:(CMTime)time {
+                        bounds:(CGRect)bounds corners:(NSArray *)corners time:(CMTime)time
+                     frameSize:(CGSize)frameSize {
     SCCodeObject *o = class_createInstance([SCCodeObject class], 0);
+    o->_frameSize = frameSize;
     o->_type = [type copy];
     o->_value = [value copy];
     o->_bounds = bounds;
@@ -315,19 +319,20 @@ static CGPoint SCLayerPoint(AVCaptureVideoPreviewLayer *layer, CGPoint p) {
     for (NSDictionary *d in _corners) {
         CGPoint p;
         CGPointMakeWithDictionaryRepresentation((CFDictionaryRef)d, &p);
-        CFDictionaryRef mapped = CGPointCreateDictionaryRepresentation(SCLayerPoint(layer, p));
+        CFDictionaryRef mapped = CGPointCreateDictionaryRepresentation(SCLayerPoint(layer, _frameSize, p));
         [corners addObject:(id)mapped];
         CFRelease(mapped);
     }
-    CGPoint a = SCLayerPoint(layer, _bounds.origin);
-    CGPoint b = SCLayerPoint(layer, CGPointMake(CGRectGetMaxX(_bounds), CGRectGetMaxY(_bounds)));
+    CGPoint a = SCLayerPoint(layer, _frameSize, _bounds.origin);
+    CGPoint b = SCLayerPoint(layer, _frameSize, CGPointMake(CGRectGetMaxX(_bounds), CGRectGetMaxY(_bounds)));
     CGRect bounds = CGRectMake(a.x, a.y, b.x - a.x, b.y - a.y);
-    return [SCCodeObject codeWithType:_type value:_value bounds:bounds corners:corners time:_time];
+    return [SCCodeObject codeWithType:_type value:_value bounds:bounds corners:corners time:_time
+                            frameSize:_frameSize];
 }
 @end
 
 /// Barcodes that arrived with the current frame, as fake metadata objects.
-static NSArray<SCCodeObject *> *SCCurrentCodes(CMTime time) {
+static NSArray<SCCodeObject *> *SCCurrentCodes(CMTime time, CGSize frameSize) {
     NSData *json = SCFrameSourceCopyMeta();
     if (!json) return @[];
     NSArray *items = [NSJSONSerialization JSONObjectWithData:json options:0 error:NULL];
@@ -347,7 +352,8 @@ static NSArray<SCCodeObject *> *SCCurrentCodes(CMTime time) {
             [corners addObject:(id)d];
             CFRelease(d);
         }
-        [codes addObject:[SCCodeObject codeWithType:type value:value bounds:bounds corners:corners time:time]];
+        [codes addObject:[SCCodeObject codeWithType:type value:value bounds:bounds corners:corners time:time
+                                          frameSize:frameSize]];
     }
     return codes;
 }
@@ -531,7 +537,9 @@ static void SCPumpTick(void) {
     if (sample) {
         // Metadata at ~10 Hz is plenty for scanners and keeps delegates calm.
         NSArray *codes = (gFramesDelivered % 3 == 0)
-            ? SCCurrentCodes(CMSampleBufferGetPresentationTimeStamp(sample)) : @[];
+            ? SCCurrentCodes(CMSampleBufferGetPresentationTimeStamp(sample),
+                             CGSizeMake(CVPixelBufferGetWidth(pixelBuffer), CVPixelBufferGetHeight(pixelBuffer)))
+            : @[];
         for (AVCaptureSession *session in sessions) SCDeliverToOutputs(session, sample, codes);
         CFRelease(sample);
     }

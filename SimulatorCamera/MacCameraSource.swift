@@ -19,6 +19,7 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
 
     let kind: SimCamSourceKind = .macCamera
     var onFrame: ((CVPixelBuffer) -> Void)?
+    var onFeedFrame: ((CVPixelBuffer) -> Void)?
 
     private let session = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "jp.co.bluecode.SimulatorCamera.maccamera.session")
@@ -121,6 +122,7 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
         isStopped = true
         stateLock.unlock()
         onFrame = nil
+        onFeedFrame = nil
         sessionQueue.async { [session, log] in
             guard session.isRunning else { return }
             session.stopRunning()
@@ -138,5 +140,12 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
         guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer),
               let frame = normalizer.canonicalize(pb) else { return }
         onFrame?(frame)
+        // Portrait: crop the landscape webcam to the centre (fill) rather
+        // than letterboxing it, the way an upright phone camera frames it.
+        if let onFeedFrame, let feed = SimulatorFeed.shared.frame(from: frame, render: { size in
+            normalizer.canonicalize(pb, size: size, fill: true)
+        }) {
+            onFeedFrame(feed)
+        }
     }
 }

@@ -115,9 +115,9 @@ final class SourceManager {
         let link = self.link
         var localCount = 0
         let feed = SimulatorFeed.shared
+        source.onFeedFrame = { frame in feed.publish(frame) }
         source.onFrame = { [weak self] frame in
             link.pushFrame(frame)
-            feed.publish(frame)
             localCount += 1
             if localCount % 10 == 0 {
                 let count = localCount
@@ -176,6 +176,7 @@ final class SourceManager {
 
     private func tearDownActiveSource() {
         activeSource?.onFrame = nil
+        activeSource?.onFeedFrame = nil
         activeSource?.stop()
         activeSource = nil
         framesPushed = 0

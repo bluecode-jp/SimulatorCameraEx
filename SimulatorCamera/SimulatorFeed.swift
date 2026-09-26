@@ -18,6 +18,7 @@
 //  so a slow client drops frames instead of queueing them.
 //
 
+import CoreGraphics
 import CoreVideo
 import Foundation
 import Network
@@ -52,6 +53,42 @@ final class SimulatorFeed: @unchecked Sendable {
 
     /// Number of simulator apps currently connected (read from any thread).
     var clientCount: Int { queue.sync { clients.count } }
+
+    // MARK: - Orientation
+
+    /// Shape of the frames sent to simulator apps. Portrait matches an iPhone
+    /// held upright, so full-screen camera views are not cropped to a sliver
+    /// of a landscape frame; the CMIO extension always gets landscape.
+    enum Orientation: String, CaseIterable, Sendable {
+        case portrait, landscape
+
+        var frameSize: CGSize {
+            self == .portrait ? FrameRaster.portraitSize : FrameRaster.canonicalSize
+        }
+    }
+
+    static let orientationDefaultsKey = "simulatorFrameOrientation"
+    private let orientationLock = NSLock()
+    private var _orientation: Orientation =
+        UserDefaults.standard.string(forKey: SimulatorFeed.orientationDefaultsKey)
+            .flatMap(Orientation.init(rawValue:)) ?? .portrait
+
+    var orientation: Orientation {
+        get { orientationLock.lock(); defer { orientationLock.unlock() }; return _orientation }
+        set {
+            orientationLock.lock(); _orientation = newValue; orientationLock.unlock()
+            UserDefaults.standard.set(newValue.rawValue, forKey: Self.orientationDefaultsKey)
+        }
+    }
+
+    /// The frame to send given a source's canonical one: the same buffer in
+    /// landscape, otherwise `render(size)` (the source redraws from its
+    /// original, so nothing is letterboxed twice). Nil when nobody listens.
+    func frame(from canonical: CVPixelBuffer, render: (CGSize) -> CVPixelBuffer?) -> CVPixelBuffer? {
+        guard clientCount > 0 else { return nil }
+        let size = orientation.frameSize
+        return size == FrameRaster.canonicalSize ? canonical : render(size)
+    }
 
     func start() {
         queue.async { [self] in
