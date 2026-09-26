@@ -14,6 +14,7 @@ struct MainView: View {
     @Environment(ExtensionController.self) private var extensionController
     @Environment(CameraLink.self) private var link
     @Environment(SourceManager.self) private var sourceManager
+    @Environment(SimulatorAutoEnabler.self) private var simulatorAutoEnabler
 
     var body: some View {
         ScrollView {
@@ -21,6 +22,7 @@ struct MainView: View {
                 header
                 extensionStatusCard
                 sourcePicker
+                simulatorCard
                 diagnosticsCard
                 footer
             }
@@ -68,6 +70,37 @@ struct MainView: View {
         }
         .padding(14)
         .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - iOS Simulator
+
+    private var simulatorCard: some View {
+        @Bindable var auto = simulatorAutoEnabler
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("iOS Simulator").font(.headline)
+            Toggle("Enable the camera in iOS Simulators automatically when they boot", isOn: $auto.isEnabled)
+                .font(.callout)
+            Text(simulatorStatusText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let err = simulatorAutoEnabler.lastError {
+                Text(err).font(.caption).foregroundStyle(.red)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var simulatorStatusText: String {
+        guard simulatorAutoEnabler.isEnabled else {
+            return "Off. Use `simcamctl sim-enable` or `sim-launch` to load the camera by hand."
+        }
+        let devices = simulatorAutoEnabler.enabledDevices
+        if devices.isEmpty { return "Waiting for a simulator to boot…" }
+        return "Camera enabled in: " + devices.joined(separator: ", ")
+            + ". Apps launched from now on get the camera; relaunch apps that were already open."
     }
 
     // MARK: - Source picker
@@ -296,6 +329,9 @@ struct MainView: View {
         if let received = link.extensionStatus?.framesReceived, received > 0 {
             parts.append("received by extension: \(received)")
         }
+        // Re-evaluated whenever the counters above change (every few frames,
+        // or the 1 s status poll), which is often enough for a client count.
+        parts.append("iOS Simulator apps: \(SimulatorFeed.shared.clientCount)")
         return parts.joined(separator: " · ")
     }
 

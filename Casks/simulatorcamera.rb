@@ -25,9 +25,9 @@ cask "simulatorcamera" do
   ]
 
   zap trash: [
-    "~/Library/Preferences/com.dautov.SimulatorCamera.plist",
+    "~/Library/Preferences/jp.co.bluecode.SimulatorCamera.plist",
     "~/Library/Application Support/SimulatorCamera",
-    "~/Library/Containers/com.dautov.SimulatorCamera",
-    "~/Library/Containers/com.dautov.SimulatorCamera.Extension",
+    "~/Library/Containers/jp.co.bluecode.SimulatorCamera",
+    "~/Library/Containers/jp.co.bluecode.SimulatorCamera.Extension",
   ]
 end

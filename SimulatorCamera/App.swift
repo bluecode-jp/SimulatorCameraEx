@@ -15,6 +15,7 @@ struct SimulatorCameraApp: App {
     @State private var extensionController = ExtensionController()
     @State private var cameraLink: CameraLink
     @State private var sourceManager: SourceManager
+    @State private var simulatorAutoEnabler = SimulatorAutoEnabler()
 
     init() {
         let link = CameraLink()
@@ -28,10 +29,13 @@ struct SimulatorCameraApp: App {
                 .environment(extensionController)
                 .environment(cameraLink)
                 .environment(sourceManager)
+                .environment(simulatorAutoEnabler)
                 .frame(minWidth: 540, minHeight: 520)
                 .task {
                     extensionController.check()
                     cameraLink.connect()
+                    SimulatorFeed.shared.start()
+                    simulatorAutoEnabler.start()
                 }
         }
         .windowResizability(.contentSize)

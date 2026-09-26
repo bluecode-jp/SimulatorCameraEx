@@ -6,7 +6,7 @@ name: SimulatorCamera
 # virtual camera that the iOS Simulator can pick up via standard AVFoundation.
 
 options:
-  bundleIdPrefix: com.dautov
+  bundleIdPrefix: jp.co.bluecode
   deploymentTarget:
     macOS: "14.0"
   developmentLanguage: en
@@ -19,14 +19,14 @@ settings:
     SWIFT_VERSION: "5.10"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "4"
     SWIFT_STRICT_CONCURRENCY: minimal
     DEAD_CODE_STRIPPING: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
-    # Locked to Ruslan's Apple Development team (27EZNUVV57). For
+    # Locked to BLUECODE,INC. team (C5TUJ8526Z). For
     # Distribution builds (notarized DMG release), override at the
-    # xcodebuild command line: DEVELOPMENT_TEAM=27EZNUVV57.
-    DEVELOPMENT_TEAM: 27EZNUVV57
+    # xcodebuild command line: DEVELOPMENT_TEAM=C5TUJ8526Z.
+    DEVELOPMENT_TEAM: C5TUJ8526Z
     CODE_SIGN_STYLE: Automatic
     # Force the modern unified "Apple Development" cert type instead of
     # the legacy "Mac Developer" that Xcode picks by default for macOS apps.
@@ -56,8 +56,11 @@ targets:
         NSSystemExtensionUsageDescription: SimulatorCamera installs a Camera Extension so the iOS Simulator can capture video without a physical device.
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.dautov.SimulatorCamera
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.SimulatorCamera
         PRODUCT_NAME: SimulatorCamera
+        # The SimCamInject build phase runs clang + codesign, which need
+        # temp/cache writes the user-script sandbox refuses.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         CODE_SIGN_ENTITLEMENTS: SimulatorCamera/SimulatorCamera.entitlements
         CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: YES
@@ -69,6 +72,31 @@ targets:
           subpath: ../Library/SystemExtensions
         embed: true
         codeSign: true
+      # Ship the CLI inside the app bundle (Contents/MacOS/simcamctl) so the
+      # DMG / cask can expose it without a separate download.
+      - target: simcamctl
+        copy:
+          destination: executables
+        embed: true
+        codeSign: true
+
+    postBuildScripts:
+      # iOS Simulator camera: SimCamInject dylibs, loaded into Simulator apps
+      # by `simcamctl sim-enable` / `sim-launch`. Built for iphonesimulator
+      # and signed with the app's identity before the app itself is sealed.
+      - name: Build SimCamInject
+        script: |
+          SIGN_IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:--}" \
+            "${SRCROOT}/SimCamInject/build.sh" "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SimCamInject"
+        inputFiles:
+          - $(SRCROOT)/SimCamInject/build.sh
+          - $(SRCROOT)/SimCamInject/SimCamLoader.c
+          - $(SRCROOT)/SimCamInject/SimCamInject.m
+          - $(SRCROOT)/SimCamInject/SimCamFrameSource.m
+          - $(SRCROOT)/SimCamInject/SimCamFrameSource.h
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/SimCamInject/SimCamLoader.dylib
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/SimCamInject/SimCamInject.dylib
 
   SimulatorCameraExtension:
     type: system-extension
@@ -96,11 +124,13 @@ targets:
         # Reference: Apple's Camera Extension Xcode template TemplateInfo.plist
         # only declares CMIOExtension + NSSystemExtensionUsageDescription.
         CMIOExtension:
-          CMIOExtensionMachServiceName: $(TeamIdentifierPrefix)com.dautov.SimulatorCamera.Extension
+          CMIOExtensionMachServiceName: $(TeamIdentifierPrefix)jp.co.bluecode.SimulatorCamera.Extension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.dautov.SimulatorCamera.Extension
-        PRODUCT_NAME: SimulatorCameraExtension
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.SimulatorCamera.Extension
+        # sysextd locates the extension by file name, so the bundle must be
+        # named <bundle id>.systemextension (same as Apple's template).
+        PRODUCT_NAME: $(PRODUCT_BUNDLE_IDENTIFIER)
         CODE_SIGN_ENTITLEMENTS: SimulatorCameraExtension/SimulatorCameraExtension.entitlements
         CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: YES
@@ -115,9 +145,14 @@ targets:
       - path: Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.dautov.simcamctl
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.simcamctl
         PRODUCT_NAME: simcamctl
         CODE_SIGN_STYLE: Automatic
+        # Embed an Info.plist so the code-signing identifier is the bundle
+        # id (jp.co.bluecode.simcamctl) rather than the bare product name;
+        # the extension only accepts sink producers with that signing ID.
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         ENABLE_HARDENED_RUNTIME: YES
         SKIP_INSTALL: NO
 
@@ -132,8 +167,9 @@ targets:
       - path: Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.dautov.SimulatorCamera.Tests
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.SimulatorCamera.Tests
         CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
 
 schemes:
   SimulatorCamera:

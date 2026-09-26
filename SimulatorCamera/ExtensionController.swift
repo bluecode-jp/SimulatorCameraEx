@@ -16,7 +16,7 @@ import Observation
 import OSLog
 import SystemExtensions
 
-private let extensionBundleIdentifier = "com.dautov.SimulatorCamera.Extension"
+private let extensionBundleIdentifier = "jp.co.bluecode.SimulatorCamera.Extension"
 
 @Observable
 @MainActor
@@ -36,7 +36,14 @@ final class ExtensionController: NSObject {
     private(set) var state: State = .unknown
     private(set) var lastMessage: String = ""
 
-    private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "extension")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "extension")
+
+    /// CFBundleVersion of the extension embedded in this app.
+    private static let bundledExtensionBuild: String? = {
+        let url = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Library/SystemExtensions/\(extensionBundleIdentifier).systemextension")
+        return Bundle(url: url)?.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+    }()
 
     /// Requests currently in flight, keyed by identity, so we can tell a
     /// properties query apart from an activation when results come back.
@@ -123,6 +130,15 @@ extension ExtensionController: OSSystemExtensionRequestDelegate {
         Task { @MainActor in
             _ = self.finish(request)
             if let enabled = properties.first(where: { $0.isEnabled && !$0.isAwaitingUserApproval }) {
+                // An older build is active (the app was updated): activate the
+                // bundled one so the delegate replaces it. Otherwise the only
+                // button offered is Deactivate, which targets the bundled build
+                // and fails because that build isn't installed.
+                if let bundled = Self.bundledExtensionBuild, enabled.bundleVersion != bundled {
+                    self.log.info("replacing extension build \(enabled.bundleVersion, privacy: .public) with \(bundled, privacy: .public)")
+                    self.activate()
+                    return
+                }
                 self.state = .active
                 self.lastMessage = "Extension v\(enabled.bundleShortVersion) is active."
             } else if properties.contains(where: { $0.isAwaitingUserApproval }) {

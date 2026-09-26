@@ -18,7 +18,7 @@ final class ImageSource: FrameSource {
     var onFrame: ((CVPixelBuffer) -> Void)?
 
     private let url: URL
-    private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "image")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "image")
     private var task: Task<Void, Never>?
 
     init(url: URL) {

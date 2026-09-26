@@ -80,7 +80,12 @@ final class FrameNormalizer {
 
         var image = CIImage(cvPixelBuffer: pixelBuffer)
         if !transform.isIdentity {
-            image = image.transformed(by: transform)
+            // preferredTransform is expressed in top-left-origin (y down)
+            // pixel space; Core Image is bottom-left-origin (y up). Conjugate
+            // with a y-flip, otherwise a 90° portrait rotation turns the
+            // wrong way and the video comes out upside down.
+            let flipY = CGAffineTransform(scaleX: 1, y: -1)
+            image = image.transformed(by: flipY.concatenating(transform).concatenating(flipY))
             // Move the rotated image back to the origin.
             image = image.transformed(by: CGAffineTransform(
                 translationX: -image.extent.origin.x,

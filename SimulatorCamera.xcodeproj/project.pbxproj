@@ -12,6 +12,7 @@
 		123734FDBD4B874EC803EC0B /* CameraContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED1C6F161452746D401A561 /* CameraContract.swift */; };
 		15791A539F2708C098E31D62 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */; };
 		179FDC3A8B0E644F699454C4 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79EB81F6F0FA26FC8C0D512B /* main.swift */; };
+		27BFA0EF48E103E7E4B36D47 /* SimulatorInjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B87B0329FCDB57DA155712 /* SimulatorInjection.swift */; };
 		2AB97A0BCC2C375207D8AFD6 /* FrameRaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */; };
 		30DCA34043EAA4DDA7E43A57 /* CMIOSinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */; };
 		313CD0876911B414C8C71B91 /* FrameRaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */; };
@@ -28,6 +29,8 @@
 		A03B198646B946D161279AE4 /* ExtensionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F7FE73205CB332230563010 /* ExtensionController.swift */; };
 		A17CABFD712A0F8A6992E430 /* CameraContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 208AA3693AAB57C41B83F610 /* CameraContractTests.swift */; };
 		A86A15DD7CB53CE6EB144F28 /* CMIOSinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */; };
+		B0A2081D086185F9AD9A044F /* SimulatorFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = E16A1DE37C881B7ABD3CC24D /* SimulatorFeed.swift */; };
+		B7D4DF4D9F8B0DF144F15BA1 /* simcamctl in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = FABB5CBC712CB80CE50B8C1E /* simcamctl */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		B99D036AA1563999AD109EBB /* CameraContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED1C6F161452746D401A561 /* CameraContract.swift */; };
 		BE593A54205871224550F5FF /* CameraContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED1C6F161452746D401A561 /* CameraContract.swift */; };
 		BFBE13333CF067BDB88CB825 /* QRRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */; };
@@ -39,9 +42,17 @@
 		D97A5DF273D525682867329C /* CMIOSinkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */; };
 		EA24C3B90C006BB89A1CDC6B /* CameraContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED1C6F161452746D401A561 /* CameraContract.swift */; };
 		F6D3FCD3CDF09C4E6AB84FB0 /* VideoFileSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 197CD7BA6EB552D5C96D7431 /* VideoFileSource.swift */; };
+		FC5CCA69640FAE816B043497 /* SimulatorAutoEnabler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6611BE63E8220E854DEB7293 /* SimulatorAutoEnabler.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		732AC5C8964DE7C872CCE1DF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A826E33CF029E6C1E0413B49 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2F825DE5C87BFF9E79530A2A;
+			remoteInfo = simcamctl;
+		};
 		7D16D21985B82E71E2F01CF9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A826E33CF029E6C1E0413B49 /* Project object */;
@@ -52,6 +63,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		0B57033FD09FA6582F57FF37 /* Embed Dependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				B7D4DF4D9F8B0DF144F15BA1 /* simcamctl in Embed Dependencies */,
+			);
+			name = "Embed Dependencies";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4AACD8F0F143DE3CA8F7D170 /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -75,15 +97,18 @@
 		34DBFC0A082BB7CE216717D6 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		37304038FE36D2D1035F449C /* CameraLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraLink.swift; sourceTree = "<group>"; };
 		382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRRenderer.swift; sourceTree = "<group>"; };
+		43B87B0329FCDB57DA155712 /* SimulatorInjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorInjection.swift; sourceTree = "<group>"; };
 		4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacCameraSource.swift; sourceTree = "<group>"; };
 		5009C01A5443FF9242C25F78 /* SourceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceManager.swift; sourceTree = "<group>"; };
 		5543F1512AE6614C0DE4861D /* QRSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRSource.swift; sourceTree = "<group>"; };
+		6611BE63E8220E854DEB7293 /* SimulatorAutoEnabler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorAutoEnabler.swift; sourceTree = "<group>"; };
 		79EB81F6F0FA26FC8C0D512B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameRaster.swift; sourceTree = "<group>"; };
 		9F7FE73205CB332230563010 /* ExtensionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionController.swift; sourceTree = "<group>"; };
 		B2627A8C5CB8687217B22436 /* CMIOSinkClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CMIOSinkClient.swift; sourceTree = "<group>"; };
 		DB54B2F9E37B302B163A2E80 /* SimulatorCamera.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimulatorCamera.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCE77BA32C83D30E6F389FEC /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		E16A1DE37C881B7ABD3CC24D /* SimulatorFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorFeed.swift; sourceTree = "<group>"; };
 		EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
 		EED1C6F161452746D401A561 /* CameraContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraContract.swift; sourceTree = "<group>"; };
 		F98E17DBE81C3CB7BB6DD64F /* SimulatorCameraExtension.systemextension */ = {isa = PBXFileReference; explicitFileType = "wrapper.system-extension"; includeInIndex = 0; path = SimulatorCameraExtension.systemextension; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -105,6 +130,7 @@
 			children = (
 				34DBFC0A082BB7CE216717D6 /* main.swift */,
 				17E2492228A96A265315275C /* SimCamCLIClient.swift */,
+				43B87B0329FCDB57DA155712 /* SimulatorInjection.swift */,
 			);
 			path = simcamctl;
 			sourceTree = "<group>";
@@ -163,6 +189,8 @@
 				4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */,
 				F9C0BF6EA2153FF6E4FBC5A8 /* MainView.swift */,
 				5543F1512AE6614C0DE4861D /* QRSource.swift */,
+				6611BE63E8220E854DEB7293 /* SimulatorAutoEnabler.swift */,
+				E16A1DE37C881B7ABD3CC24D /* SimulatorFeed.swift */,
 				5009C01A5443FF9242C25F78 /* SourceManager.swift */,
 				197CD7BA6EB552D5C96D7431 /* VideoFileSource.swift */,
 			);
@@ -229,11 +257,14 @@
 			buildPhases = (
 				1096B2376032B3F8640D7973 /* Sources */,
 				4AACD8F0F143DE3CA8F7D170 /* Embed Dependencies */,
+				0B57033FD09FA6582F57FF37 /* Embed Dependencies */,
+				9E5CB8695E568823215F382C /* Build SimCamInject */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				8F2F5D5E894729086B418E7C /* PBXTargetDependency */,
+				D5B883B0CC2CF974F42EB17C /* PBXTargetDependency */,
 			);
 			name = SimulatorCamera;
 			packageProductDependencies = (
@@ -252,19 +283,19 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					2F825DE5C87BFF9E79530A2A = {
-						DevelopmentTeam = 27EZNUVV57;
+						DevelopmentTeam = C5TUJ8526Z;
 						ProvisioningStyle = Automatic;
 					};
 					96BA321FA52FBFF181CDE181 = {
-						DevelopmentTeam = 27EZNUVV57;
+						DevelopmentTeam = C5TUJ8526Z;
 						ProvisioningStyle = Automatic;
 					};
 					AD86DF29F2ACE01A4289728A = {
-						DevelopmentTeam = 27EZNUVV57;
+						DevelopmentTeam = C5TUJ8526Z;
 						ProvisioningStyle = Automatic;
 					};
 					F841A99D64919215BF4E65C1 = {
-						DevelopmentTeam = 27EZNUVV57;
+						DevelopmentTeam = C5TUJ8526Z;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -291,6 +322,34 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		9E5CB8695E568823215F382C /* Build SimCamInject */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/SimCamInject/build.sh",
+				"$(SRCROOT)/SimCamInject/SimCamLoader.c",
+				"$(SRCROOT)/SimCamInject/SimCamInject.m",
+				"$(SRCROOT)/SimCamInject/SimCamFrameSource.m",
+				"$(SRCROOT)/SimCamInject/SimCamFrameSource.h",
+			);
+			name = "Build SimCamInject";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/SimCamInject/SimCamLoader.dylib",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/SimCamInject/SimCamInject.dylib",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "SIGN_IDENTITY=\"${EXPANDED_CODE_SIGN_IDENTITY:--}\" \\\n  \"${SRCROOT}/SimCamInject/build.sh\" \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SimCamInject\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		1096B2376032B3F8640D7973 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -308,6 +367,8 @@
 				386FA16D47CF0C291E857D00 /* MainView.swift in Sources */,
 				4FC626F7D38B26A92C8F017F /* QRRenderer.swift in Sources */,
 				407FDEB20AF617B242C43F43 /* QRSource.swift in Sources */,
+				FC5CCA69640FAE816B043497 /* SimulatorAutoEnabler.swift in Sources */,
+				B0A2081D086185F9AD9A044F /* SimulatorFeed.swift in Sources */,
 				0B0F268D9B7EE26F8904395C /* SourceManager.swift in Sources */,
 				F6D3FCD3CDF09C4E6AB84FB0 /* VideoFileSource.swift in Sources */,
 			);
@@ -347,6 +408,7 @@
 				313CD0876911B414C8C71B91 /* FrameRaster.swift in Sources */,
 				BFBE13333CF067BDB88CB825 /* QRRenderer.swift in Sources */,
 				9A9423F300616A5876893390 /* SimCamCLIClient.swift in Sources */,
+				27BFA0EF48E103E7E4B36D47 /* SimulatorInjection.swift in Sources */,
 				9F46B480FDD94B5D2359EB61 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -358,6 +420,11 @@
 			isa = PBXTargetDependency;
 			target = 96BA321FA52FBFF181CDE181 /* SimulatorCameraExtension */;
 			targetProxy = 7D16D21985B82E71E2F01CF9 /* PBXContainerItemProxy */;
+		};
+		D5B883B0CC2CF974F42EB17C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2F825DE5C87BFF9E79530A2A /* simcamctl */;
+			targetProxy = 732AC5C8964DE7C872CCE1DF /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -399,10 +466,10 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 27EZNUVV57;
+				DEVELOPMENT_TEAM = C5TUJ8526Z;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -433,12 +500,13 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dautov.SimulatorCamera.Tests;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.SimulatorCamera.Tests;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -451,13 +519,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SimulatorCamera/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dautov.SimulatorCamera;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.SimulatorCamera;
 				PRODUCT_NAME = SimulatorCamera;
 				SDKROOT = macosx;
 			};
@@ -468,12 +537,14 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dautov.simcamctl;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.simcamctl;
 				PRODUCT_NAME = simcamctl;
 				SDKROOT = macosx;
 				SKIP_INSTALL = NO;
@@ -517,10 +588,10 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 27EZNUVV57;
+				DEVELOPMENT_TEAM = C5TUJ8526Z;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -557,12 +628,14 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dautov.simcamctl;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.simcamctl;
 				PRODUCT_NAME = simcamctl;
 				SDKROOT = macosx;
 				SKIP_INSTALL = NO;
@@ -575,12 +648,13 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dautov.SimulatorCamera.Tests;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.SimulatorCamera.Tests;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -598,8 +672,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dautov.SimulatorCamera.Extension;
-				PRODUCT_NAME = SimulatorCameraExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.SimulatorCamera.Extension;
+				PRODUCT_NAME = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
@@ -613,13 +687,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SimulatorCamera/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dautov.SimulatorCamera;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.SimulatorCamera;
 				PRODUCT_NAME = SimulatorCamera;
 				SDKROOT = macosx;
 			};
@@ -638,8 +713,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.dautov.SimulatorCamera.Extension;
-				PRODUCT_NAME = SimulatorCameraExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.SimulatorCamera.Extension;
+				PRODUCT_NAME = "$(PRODUCT_BUNDLE_IDENTIFIER)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};

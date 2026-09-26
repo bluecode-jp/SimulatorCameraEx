@@ -4,8 +4,8 @@
 #                       signing using the existing ASC API key. No Xcode UI
 #                       account login required.
 #
-# Uses the bundle IDs registered in App Store Connect (com.dautov.SimulatorCamera
-# and com.dautov.SimulatorCamera.Extension) under team 27EZNUVV57. The
+# Uses the bundle IDs registered in App Store Connect (jp.co.bluecode.SimulatorCamera
+# and jp.co.bluecode.SimulatorCamera.Extension) under team C5TUJ8526Z. The
 # SYSTEM_EXTENSION_INSTALL capability is already enabled on those bundle IDs.
 #
 # Run this every time you want a fresh signed dev build. Re-running creates
@@ -20,7 +20,7 @@ cd "$REPO_ROOT"
 KEY_ID="${ASC_KEY_ID:-P3XR759Z63}"
 ISSUER_ID="${ASC_ISSUER_ID:-a104af48-9c8f-4749-a8a3-81ae0e8a0734}"
 KEY_PATH="${ASC_KEY_PATH:-$HOME/.config/appstore-connect/AuthKey_P3XR759Z63.p8}"
-TEAM_ID="${DEVELOPMENT_TEAM:-27EZNUVV57}"
+TEAM_ID="${DEVELOPMENT_TEAM:-C5TUJ8526Z}"
 
 if [[ ! -f "$KEY_PATH" ]]; then
     echo "ERROR: ASC API key not found at $KEY_PATH" >&2

@@ -18,7 +18,7 @@ final class QRSource: FrameSource {
     var onFrame: ((CVPixelBuffer) -> Void)?
 
     private let payload: String
-    private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "qr")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "qr")
     private var task: Task<Void, Never>?
 
     init(payload: String) {

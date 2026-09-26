@@ -47,7 +47,7 @@ final class SourceManager {
     private var activeSource: FrameSource?
     private var switchGeneration = 0
     private let link: CameraLink
-    private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "source-manager")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "source-manager")
 
     init(link: CameraLink) {
         self.link = link
@@ -102,19 +102,22 @@ final class SourceManager {
         // Open the sink before the producer starts so its first frames have
         // somewhere to go. The extension keeps showing the test pattern
         // until we declare the new kind below.
+        // The extension is optional now: frames also reach iOS Simulator apps
+        // through SimulatorFeed, so a missing extension is only a warning.
         do {
             try link.openSink()
         } catch {
-            lastError = "Extension not reachable: \(error.localizedDescription)"
-            throw SwitchError.startFailed(lastError ?? error.localizedDescription)
+            log.warning("sink unavailable, feeding simulator only: \(error.localizedDescription, privacy: .public)")
         }
 
         // Frames go straight to the sink from the producer's thread; only
         // the counter hops to the main actor, and only every few frames.
         let link = self.link
         var localCount = 0
+        let feed = SimulatorFeed.shared
         source.onFrame = { [weak self] frame in
             link.pushFrame(frame)
+            feed.publish(frame)
             localCount += 1
             if localCount % 10 == 0 {
                 let count = localCount

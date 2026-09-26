@@ -42,6 +42,10 @@ public let kSimCamSinkStreamName = "SimulatorCamera.Video.Sink"
 /// hiccups, small enough that a stalled extension never eats memory.
 public let kSimCamSinkQueueDepth: Int = 4
 
+/// Loopback TCP port the container app serves frames on for iOS Simulator
+/// apps running SimCamInject.dylib (see SimulatorFeed.swift).
+public let kSimCamFeedPort: UInt16 = 47847
+
 // MARK: - Custom properties
 
 /// Custom CMIO properties the extension exposes on its *source* stream.

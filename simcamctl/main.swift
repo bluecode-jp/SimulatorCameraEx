@@ -32,6 +32,16 @@ func usage() -> Never {
       set-source --pattern         Use the built-in test pattern
       set-source --qr "PAYLOAD"    Generate + stream a QR code
       set-source --image PATH      Stream a static PNG/JPG file
+
+    iOS SIMULATOR (camera for apps in the Simulator, via SimCamInject.dylib):
+      sim-enable [--app ID]...     Load the camera into every app launched from now
+                                   on (or only the given bundle IDs)
+      sim-disable                  Stop loading it (a simulator reboot also clears it)
+      sim-status                   Show injection state and Mac app reachability
+      sim-launch ID [--url URL]    Launch one app with the camera, this launch only
+      All sim-* commands take --device UDID (default: booted). Frames come from
+      the running SimulatorCamera.app; pick the source there.
+
       help                         Show this help
 
     EXIT CODES:
@@ -59,6 +69,9 @@ let cli = SimCamCLIClient()
 switch subcommand {
 case "help", "-h", "--help":
     usage()
+
+case "sim-enable", "sim-disable", "sim-status", "sim-launch":
+    SimulatorInjection.run(subcommand, Array(args.dropFirst(2)))
 
 case "ping":
     cli.runPing()

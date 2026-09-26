@@ -41,7 +41,7 @@ final class CameraLink {
     private(set) var framesRejected: Int = 0
 
     private let client = CMIOSinkClient()
-    private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "camera-link")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "camera-link")
     private var retryTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
     private var retryAttempt = 0
@@ -144,7 +144,9 @@ final class CameraLink {
     /// frames pushed while the extension still shows the test pattern are
     /// consumed and ignored, so there is no harm in opening early.
     func openSink() throws {
-        if !client.isAttached { try client.attach() }
+        // Always re-resolve: stream IDs change when the extension is replaced
+        // or restarts, and stale IDs fail with kCMIOHardwareBadStreamError.
+        try client.attach()
         try client.openSink()
         framesRejected = 0
     }
@@ -152,7 +154,7 @@ final class CameraLink {
     /// Declare the active source to the extension. Selecting the test
     /// pattern also closes the sink.
     func setSource(_ kind: SimCamSourceKind) throws {
-        if !client.isAttached { try client.attach() }
+        try client.attach()
         if kind == .testPattern {
             client.closeSink()
         } else {

@@ -64,6 +64,7 @@ xcodebuild \
     -configuration Release \
     -destination 'generic/platform=macOS' \
     -archivePath "$ARCHIVE_PATH" \
+    -allowProvisioningUpdates \
     MARKETING_VERSION="$VERSION" \
     CURRENT_PROJECT_VERSION="$VERSION" \
     DEVELOPMENT_TEAM="${APPLE_TEAM_ID:-}" \
@@ -88,6 +89,7 @@ EOF
 xcodebuild \
     -exportArchive \
     -archivePath "$ARCHIVE_PATH" \
+    -allowProvisioningUpdates \
     -exportPath "$EXPORT_PATH" \
     -exportOptionsPlist "$BUILD_DIR/exportOptions.plist" 2>&1 | (xcpretty --simple || cat)
 
@@ -102,7 +104,7 @@ fi
 
 echo "▶︎ Verifying signature chain"
 
-EXTENSION_BUNDLE="$APP_BUNDLE/Contents/Library/SystemExtensions/SimulatorCameraExtension.systemextension"
+EXTENSION_BUNDLE="$APP_BUNDLE/Contents/Library/SystemExtensions/jp.co.bluecode.SimulatorCamera.Extension.systemextension"
 if [[ ! -d "$EXTENSION_BUNDLE" ]]; then
     echo "ERROR: bundled extension not found at $EXTENSION_BUNDLE" >&2
     exit 1
@@ -117,6 +119,24 @@ codesign -dv --verbose=4 "$EXTENSION_BUNDLE" 2>&1 | grep -q "Authority=Developer
     || { echo "ERROR: nested extension not signed with Developer ID" >&2; exit 1; }
 
 echo "✓ both binaries signed with Developer ID"
+
+# SimCamInject dylibs (iOS Simulator camera) live in Resources, which export
+# does not re-sign: they still carry the archive's Apple Development
+# signature. Re-sign them with Developer ID + hardened runtime + timestamp
+# (notarization checks every Mach-O), then re-seal the app over them.
+INJECT_DIR="$APP_BUNDLE/Contents/Resources/SimCamInject"
+if [[ ! -f "$INJECT_DIR/SimCamLoader.dylib" || ! -f "$INJECT_DIR/SimCamInject.dylib" ]]; then
+    echo "ERROR: SimCamInject dylibs missing from $INJECT_DIR" >&2
+    exit 1
+fi
+echo "▶︎ Re-signing SimCamInject dylibs with Developer ID"
+codesign -f -s "$APPLE_DEVELOPER_ID" -o runtime --timestamp \
+    "$INJECT_DIR/SimCamLoader.dylib" "$INJECT_DIR/SimCamInject.dylib"
+codesign -f -s "$APPLE_DEVELOPER_ID" -o runtime --timestamp \
+    --preserve-metadata=identifier,entitlements,requirements,flags "$APP_BUNDLE"
+codesign --verify --deep --strict "$APP_BUNDLE" \
+    || { echo "ERROR: app signature invalid after re-signing SimCamInject" >&2; exit 1; }
+echo "✓ SimCamInject dylibs signed with Developer ID"
 
 # ── Notarize ────────────────────────────────────────────────────────────────
 
@@ -162,11 +182,17 @@ hdiutil create \
 # on the DMG — not just on the .app inside).
 if [[ -z "${SKIP_NOTARIZE:-}" ]]; then
     codesign --sign "$APPLE_DEVELOPER_ID" --timestamp "$DMG_OUT"
-    xcrun notarytool submit "$DMG_OUT" \
-        --apple-id "${APPLE_ID:-}" \
-        --password "${APPLE_APP_PASSWORD:-}" \
-        --team-id "${APPLE_TEAM_ID:-}" \
-        --wait || true
+    if [[ -n "${KEYCHAIN_PROFILE:-}" ]]; then
+        xcrun notarytool submit "$DMG_OUT" \
+            --keychain-profile "$KEYCHAIN_PROFILE" \
+            --wait || true
+    else
+        xcrun notarytool submit "$DMG_OUT" \
+            --apple-id "${APPLE_ID:-}" \
+            --password "${APPLE_APP_PASSWORD:-}" \
+            --team-id "${APPLE_TEAM_ID:-}" \
+            --wait || true
+    fi
     xcrun stapler staple "$DMG_OUT" || true
 fi
 

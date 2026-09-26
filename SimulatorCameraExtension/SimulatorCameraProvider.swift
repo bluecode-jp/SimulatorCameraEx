@@ -26,7 +26,7 @@ import IOKit.audio
 import os.log
 
 private let kWhiteStripeHeight: Int = 10
-private let log = Logger(subsystem: "com.dautov.SimulatorCamera.Extension", category: "provider")
+private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera.Extension", category: "provider")
 
 // Stable UUIDs so System Profiler / AVCaptureDevice see the same device
 // across launches. Generated once with `uuidgen`.
@@ -70,7 +70,7 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
 
     private var _timer: DispatchSourceTimer?
     private let _timerQueue = DispatchQueue(
-        label: "com.dautov.SimulatorCameraExtension.timer",
+        label: "jp.co.bluecode.SimulatorCameraExtension.timer",
         qos: .userInteractive,
         attributes: [],
         autoreleaseFrequency: .workItem,
@@ -614,8 +614,16 @@ final class SimulatorCameraSinkStream: NSObject, CMIOExtensionStreamSource {
     /// so forks that keep the naming pattern need no changes.
     func authorizedToStartStream(for client: CMIOExtensionClient) -> Bool {
         let allowed = Self.allowedProducerSigningIDs()
-        guard let signingID = client.signingID, allowed.contains(signingID) else {
-            log.error("refusing sink producer pid \(client.pid) signingID=\(client.signingID ?? "nil", privacy: .public)")
+        switch client.signingID {
+        case let id? where allowed.contains(id):
+            break
+        case nil, "unknown"?:
+            // CMIO may not resolve the producer's signing ID (seen on macOS 27:
+            // always "unknown"), and the sandbox blocks looking it up by pid.
+            // Accept rather than make the sink unusable; the camera is local-only.
+            log.info("accepting sink producer pid \(client.pid) with unresolved signingID")
+        case let id?:
+            log.error("refusing sink producer pid \(client.pid) signingID=\(id, privacy: .public)")
             return false
         }
         _client = client

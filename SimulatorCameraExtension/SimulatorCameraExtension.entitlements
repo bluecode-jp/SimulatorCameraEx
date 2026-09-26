@@ -6,7 +6,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>$(TeamIdentifierPrefix)com.dautov.SimulatorCamera</string>
+		<string>$(TeamIdentifierPrefix)jp.co.bluecode.SimulatorCamera</string>
 	</array>
 </dict>
 </plist>

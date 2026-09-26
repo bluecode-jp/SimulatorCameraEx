@@ -21,7 +21,7 @@ final class VideoFileSource: FrameSource {
     var onFrame: ((CVPixelBuffer) -> Void)?
 
     private let url: URL
-    private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "video-file")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "video-file")
     private let normalizer = FrameNormalizer()
     private var task: Task<Void, Never>?
 

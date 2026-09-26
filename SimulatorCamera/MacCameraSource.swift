@@ -21,13 +21,13 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
     var onFrame: ((CVPixelBuffer) -> Void)?
 
     private let session = AVCaptureSession()
-    private let sessionQueue = DispatchQueue(label: "com.dautov.SimulatorCamera.maccamera.session")
+    private let sessionQueue = DispatchQueue(label: "jp.co.bluecode.SimulatorCamera.maccamera.session")
     private let outputQueue = DispatchQueue(
-        label: "com.dautov.SimulatorCamera.maccamera.output",
+        label: "jp.co.bluecode.SimulatorCamera.maccamera.output",
         qos: .userInteractive
     )
     private let normalizer = FrameNormalizer()
-    private let log = Logger(subsystem: "com.dautov.SimulatorCamera", category: "mac-camera")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "mac-camera")
 
     /// Set by stop(). Checked after startRunning so a stop that races the
     /// (slow) session start still wins and the camera light goes off.
