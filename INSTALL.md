@@ -1,4 +1,6 @@
-# SimulatorCamera インストール手順
+# SimulatorCameraEx インストール手順
+
+開発者向けの説明（しくみ、ビルド方法、CLI の全体、留意事項）は [README.md](README.md) を参照してください。
 
 iOS シミュレータ上のアプリにカメラ映像を渡す Mac アプリです。QR コード・バーコード画像・動画・Mac のカメラを、シミュレータ内アプリの「カメラ」として使えます。バーコード読み取り（expo-camera の `onBarcodeScanned` など）もそのまま動きます。
 
