@@ -176,11 +176,14 @@ struct MainView: View {
 
             Divider()
 
-            videoFileRow
-            imageFileRow
             qrRow
             code128Row
             ean13Row
+
+            Divider()
+
+            videoFileRow
+            imageFileRow
 
             if let err = sourceManager.lastError {
                 Text(err)
