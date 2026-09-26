@@ -54,6 +54,9 @@ final class SourceManager {
 
     init(link: CameraLink) {
         self.link = link
+        // A sink that failed to open (extension still starting) and later
+        // recovers leaves a stale "Extension not reachable" message behind.
+        link.onSinkRecovered = { [weak self] in self?.lastError = nil }
     }
 
     /// Switch to the given source kind. Throws on user-correctable issues

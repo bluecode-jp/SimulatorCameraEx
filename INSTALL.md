@@ -42,7 +42,7 @@ simcamctl sim-enable --app host.exp.Exponent      # 対象を絞る場合（--ap
    - **Static Image**：**Browse…** で画像（バーコード画像など）を選び **Use**
    - **Video File**：**Browse…** で動画を選び **Use**
    - **Mac Camera**：Mac のカメラ映像
-   - **Test Pattern**：シミュレータ側ではカラーバーが表示されます
+   - **Test Pattern (Color Bar)**：動くカラーバー（シミュレータ・Mac の仮想カメラ共通）
 2. シミュレータ上のアプリでカメラ画面を開きます。
    - 画面下の「iOS Simulator apps: N」で、つながっているアプリの数を確認できます。
    - 画像・QR にバーコードが写っていれば、アプリの読み取り処理が動きます（QR、EAN-13/8、UPC-E、Code128、Code39、Code93、ITF、DataMatrix、PDF417、Aztec）。

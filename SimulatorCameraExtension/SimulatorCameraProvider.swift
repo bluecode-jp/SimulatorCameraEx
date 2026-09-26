@@ -10,7 +10,7 @@
 //
 //  The container app enqueues canonical 1280x720 BGRA frames on the sink;
 //  the device source forwards them to the source stream. When no producer
-//  is attached (or the app asked for it) a built-in scrolling-stripe test
+//  is attached (or the app asked for it) a built-in colour-bar test
 //  pattern is generated on a timer. When a producer goes quiet mid-stream
 //  the last received frame is re-sent so clients see a frozen picture with
 //  fresh timestamps instead of a stalled capture session.
@@ -25,7 +25,14 @@ import CoreMediaIO
 import IOKit.audio
 import os.log
 
-private let kWhiteStripeHeight: Int = 10
+// Colour-bar test pattern: bars as little-endian BGRA words (0xAARRGGBB),
+// plus a white band moving kBandStep rows per frame.
+private let kColorBarsBGRA: [UInt32] = [
+    0xFFFF_FFFF, 0xFFFF_FF00, 0xFF00_FFFF, 0xFF00_FF00,
+    0xFFFF_00FF, 0xFFFF_0000, 0xFF00_00FF, 0xFF00_0000,
+]
+private let kBandHeight = 24
+private let kBandStep = 8
 private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera.Extension", category: "provider")
 
 // Stable UUIDs so System Profiler / AVCaptureDevice see the same device
@@ -81,8 +88,7 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
     private var _bufferPool: CVPixelBufferPool!
     private var _bufferAuxAttributes: NSDictionary!
 
-    private var _whiteStripeStartRow: UInt32 = 0
-    private var _whiteStripeIsAscending: Bool = false
+    private var _patternTick = 0
 
     var activeSource: SimCamSourceKind {
         get { _lock.lock(); defer { _lock.unlock() }; return _activeSource }
@@ -400,8 +406,10 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
         return noErr
     }
 
-    /// Generate one frame of the scrolling-white-stripe-on-black test pattern
-    /// and push it to the source stream.
+    /// Generate one frame of the colour-bar test pattern (white, yellow,
+    /// cyan, green, magenta, red, blue, black) with a white band scrolling
+    /// down, so a frozen feed is obvious. Same picture as SimCamInject shows
+    /// in iOS Simulator apps.
     private func emitTestPatternFrame() {
         guard let pixelBuffer = dequeuePixelBuffer() else { return }
 
@@ -410,23 +418,21 @@ final class SimulatorCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
             let width = CVPixelBufferGetWidth(pixelBuffer)
             let height = CVPixelBufferGetHeight(pixelBuffer)
             let rowBytes = CVPixelBufferGetBytesPerRow(pixelBuffer)
-            memset(base, 0, rowBytes * height)
+            let band = (_patternTick &* kBandStep) % max(height, 1)
+            _patternTick &+= 1
 
-            let maxStart = UInt32(max(0, height - kWhiteStripeHeight))
-            let stripeStart = min(_whiteStripeStartRow, maxStart)
-            if _whiteStripeIsAscending {
-                _whiteStripeStartRow = stripeStart > 0 ? stripeStart - 1 : 0
-                _whiteStripeIsAscending = _whiteStripeStartRow > 0
-            } else {
-                _whiteStripeStartRow = stripeStart + 1
-                _whiteStripeIsAscending = _whiteStripeStartRow >= maxStart
-            }
-
-            var rowPtr = base.advanced(by: rowBytes * Int(stripeStart))
-            let rowsToPaint = min(kWhiteStripeHeight, height - Int(stripeStart))
-            for _ in 0..<max(0, rowsToPaint) {
-                memset(rowPtr, 0xFF, width * kSimCamBytesPerPixel)
-                rowPtr += rowBytes
+            // One row of bars, built once per frame, copied into every row.
+            var bars = [UInt32](repeating: 0, count: width)
+            for x in 0..<width { bars[x] = kColorBarsBGRA[x * kColorBarsBGRA.count / max(width, 1)] }
+            bars.withUnsafeBytes { row in
+                for y in 0..<height {
+                    let dst = base.advanced(by: y * rowBytes)
+                    if y >= band && y < band + kBandHeight {
+                        memset(dst, 0xFF, width * kSimCamBytesPerPixel)
+                    } else {
+                        memcpy(dst, row.baseAddress!, width * kSimCamBytesPerPixel)
+                    }
+                }
             }
         }
         CVPixelBufferUnlockBaseAddress(pixelBuffer, [])

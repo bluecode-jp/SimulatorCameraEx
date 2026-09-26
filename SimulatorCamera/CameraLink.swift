@@ -48,6 +48,13 @@ final class CameraLink {
     private var wantsConnection = false
     private var deviceObserver: NSObjectProtocol?
 
+    /// Source the app last declared; frames for it need an open sink.
+    private var desiredKind: SimCamSourceKind = .testPattern
+    private var lastReopenAttempt = Date.distantPast
+    /// Called on the main actor when the sink opens again after failing
+    /// (e.g. the extension was still starting after an upgrade).
+    var onSinkRecovered: (() -> Void)?
+
     var isConnected: Bool { connectionState == .connected }
 
     // MARK: - Lifecycle
@@ -154,6 +161,7 @@ final class CameraLink {
     /// Declare the active source to the extension. Selecting the test
     /// pattern also closes the sink.
     func setSource(_ kind: SimCamSourceKind) throws {
+        desiredKind = kind
         try client.attach()
         if kind == .testPattern {
             client.closeSink()
@@ -182,7 +190,29 @@ final class CameraLink {
         case .enqueued, .dropped:
             break
         case .rejected, .sinkClosed:
-            Task { @MainActor [weak self] in self?.framesRejected += 1 }
+            Task { @MainActor [weak self] in
+                self?.framesRejected += 1
+                self?.reopenSinkIfDue()
+            }
         }
+    }
+
+    /// The sink could not be opened when the source started (extension not
+    /// registered yet, or replaced since): retry at most once a second while
+    /// frames keep arriving, and declare the source again once it opens.
+    private func reopenSinkIfDue() {
+        guard desiredKind != .testPattern, Date().timeIntervalSince(lastReopenAttempt) >= 1 else { return }
+        lastReopenAttempt = Date()
+        do {
+            try client.attach()
+            try client.openSink()
+            try client.setSourceKind(desiredKind.extensionKind)
+        } catch {
+            return
+        }
+        framesRejected = 0
+        log.info("sink reopened for \(self.desiredKind.label, privacy: .public)")
+        refreshStatus()
+        onSinkRecovered?()
     }
 }

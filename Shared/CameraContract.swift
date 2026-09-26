@@ -88,7 +88,7 @@ public enum SimCamSourceKind: Int, Sendable, CaseIterable {
 
     public var label: String {
         switch self {
-        case .testPattern: return "test pattern"
+        case .testPattern: return "test pattern (color bar)"
         case .macCamera: return "mac camera"
         case .videoFile: return "video file"
         case .image: return "static image"

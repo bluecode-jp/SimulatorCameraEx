@@ -171,7 +171,7 @@ struct MainView: View {
         return VStack(alignment: .leading, spacing: 14) {
             Text("Source").font(.headline)
 
-            sourceRow(.testPattern, icon: "tv", title: "Test Pattern", subtitle: "Built into the extension. No setup.")
+            sourceRow(.testPattern, icon: "tv", title: "Test Pattern (Color Bar)", subtitle: "Moving colour bars, built in. No setup.")
             sourceRow(.macCamera, icon: "camera.fill", title: "Mac Camera", subtitle: "Live webcam. First use prompts for camera access.")
 
             Divider()

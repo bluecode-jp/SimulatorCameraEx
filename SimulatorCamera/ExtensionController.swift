@@ -12,6 +12,7 @@
 //
 
 import Foundation
+import AppKit
 import Observation
 import OSLog
 import SystemExtensions
@@ -37,6 +38,31 @@ final class ExtensionController: NSObject {
     private(set) var lastMessage: String = ""
 
     private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "extension")
+
+    /// Set when an activation replaced an older extension build.
+    private var didReplaceExtension = false
+
+    /// CoreMediaIO keeps this process's device list from before the swap,
+    /// so the new extension's camera never shows up here ("not registered")
+    /// until the app restarts. Relaunch once, right after the replacement.
+    private func relaunchAfterReplacement() {
+        didReplaceExtension = false
+        lastMessage = "Extension updated — restarting SimulatorCameraEx to connect to it…"
+        log.info("extension replaced; relaunching to pick up the new camera device")
+        // Quit first, then reopen from a detached shell: a second instance
+        // started while this one runs could not bind the loopback ports.
+        let path = Bundle.main.bundlePath
+        let relauncher = Process()
+        relauncher.executableURL = URL(fileURLWithPath: "/bin/sh")
+        relauncher.arguments = ["-c", "sleep 1; /usr/bin/open -n \"$0\"", path]
+        do {
+            try relauncher.run()
+        } catch {
+            lastMessage = "Extension updated. Quit and reopen SimulatorCameraEx to connect."
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { NSApp.terminate(nil) }
+    }
 
     /// CFBundleVersion of the extension embedded in this app.
     private static let bundledExtensionBuild: String? = {
@@ -113,6 +139,7 @@ extension ExtensionController: OSSystemExtensionRequestDelegate {
         withExtension ext: OSSystemExtensionProperties
     ) -> OSSystemExtensionRequest.ReplacementAction {
         // Replace older with newer version automatically.
+        Task { @MainActor in self.didReplaceExtension = true }
         return .replace
     }
 
@@ -167,6 +194,7 @@ extension ExtensionController: OSSystemExtensionRequestDelegate {
                 } else {
                     self.state = .active
                     self.lastMessage = "Extension active. The virtual camera is now available in AVFoundation."
+                    if self.didReplaceExtension { self.relaunchAfterReplacement() }
                 }
             case .willCompleteAfterReboot:
                 self.state = .awaitingApproval

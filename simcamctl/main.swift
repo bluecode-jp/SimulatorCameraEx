@@ -29,7 +29,7 @@ func usage() -> Never {
     SUBCOMMANDS:
       status                       Print extension state + frame stats
       ping                         Verify the virtual camera is registered
-      set-source --pattern         Use the built-in test pattern
+      set-source --pattern         Use the built-in test pattern (color bars)
       set-source --qr "PAYLOAD"    Generate + stream a QR code
       set-source --code128 "TEXT"  Generate + stream a Code 128 barcode
       set-source --ean DIGITS      Generate + stream an EAN-13 (1–12 digits get
