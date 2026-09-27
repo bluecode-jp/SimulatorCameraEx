@@ -82,10 +82,10 @@
 		0B57033FD09FA6582F57FF37 /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 6;
+			dstPath = ../Library/SystemExtensions;
+			dstSubfolderSpec = 13;
 			files = (
-				B7D4DF4D9F8B0DF144F15BA1 /* simcamctl in Embed Dependencies */,
+				79393074F69A438E4A0665DC /* SimulatorCameraExtension.systemextension in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -93,10 +93,10 @@
 		4AACD8F0F143DE3CA8F7D170 /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = ../Library/SystemExtensions;
-			dstSubfolderSpec = 13;
+			dstPath = "";
+			dstSubfolderSpec = 6;
 			files = (
-				79393074F69A438E4A0665DC /* SimulatorCameraExtension.systemextension in Embed Dependencies */,
+				B7D4DF4D9F8B0DF144F15BA1 /* simcamctl in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -386,6 +386,9 @@
 				"$(SRCROOT)/SimCamInject/SimCamInject.m",
 				"$(SRCROOT)/SimCamInject/SimCamFrameSource.m",
 				"$(SRCROOT)/SimCamInject/SimCamFrameSource.h",
+				"$(SRCROOT)/SimCamInject/SimCamWeb.m",
+				"$(SRCROOT)/SimCamInject/SimCamWeb.h",
+				"$(SRCROOT)/SimCamInject/SimCamWebShim.js",
 			);
 			name = "Build SimCamInject";
 			outputFileListPaths = (

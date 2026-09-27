@@ -29,12 +29,14 @@ public enum QRRenderer {
         guard let base = filter.outputImage, base.extent.width > 0, base.extent.height > 0 else {
             return nil
         }
-        // The virtual camera keeps the code well inside the crop-safe area
-        // (see FrameRaster.cropSafeSize); simulator frames use qrSide.
-        let safe = FrameRaster.cropSafeSize(for: size)
-        let qrSide = virtualCamera
-            ? min(Self.qrSide, (min(safe.width, safe.height) * 0.75).rounded(.down))
-            : Self.qrSide
+        // Scanner screens often show a portrait camera frame in a landscape
+        // 4:3 box, which shows only 3/4 of the frame's width in height. Keep
+        // the code within 85% of that, measured on the frame's short side:
+        // 459 px on simulator frames, and on the virtual camera the short
+        // side of the crop-safe area (see FrameRaster.cropSafeRect), which is
+        // what the Android Emulator hands Chrome.
+        let area = virtualCamera ? FrameRaster.cropSafeRect(for: size) : CGRect(origin: .zero, size: size)
+        let qrSide = min(Self.qrSide, (min(area.width, area.height) * 3 / 4 * 0.85).rounded(.down))
         let scaled = base.transformed(by: CGAffineTransform(
             scaleX: qrSide / base.extent.width,
             y: qrSide / base.extent.height
@@ -43,7 +45,7 @@ public enum QRRenderer {
         guard let qrCG = context.createCGImage(scaled, from: scaled.extent) else { return nil }
         return FrameRaster.render(size: size, background: CGColor(red: 1, green: 1, blue: 1, alpha: 1)) { ctx in
             let rect = CGRect(
-                x: (size.width - qrSide) / 2,
+                x: (area.midX - qrSide / 2).rounded(),
                 y: (size.height - qrSide) / 2,
                 width: qrSide, height: qrSide
             )

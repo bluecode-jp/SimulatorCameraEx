@@ -92,22 +92,31 @@ public enum BarcodeRenderer {
             caption = payload
         }
 
-        // Quiet zone of 10 modules per side, the barcode filling at most 84%
-        // of the width. Simulator frames use an integer module width so bars
-        // stay crisp. The virtual camera fits the crop-safe middle instead
-        // (see FrameRaster.cropSafeSize) with a fractional module width, as
-        // flooring to whole pixels there would waste up to half the space;
-        // the emulator rescales the frame anyway.
+        // Quiet zone of 10 modules per side. Simulator frames: the barcode
+        // fills at most 84% of the width, with an integer module width so
+        // bars stay crisp. The virtual camera fits 90% of the crop-safe area
+        // instead (see FrameRaster.cropSafeRect) with a fractional module
+        // width, as flooring to whole pixels there would waste up to half the
+        // space; the emulator rescales the frame anyway. The caption is kept
+        // inside that area too (Menlo advances about 0.6 em per character).
         let quiet = 10
-        let moduleWidth: CGFloat = virtualCamera
-            ? max(1, FrameRaster.cropSafeSize(for: size).width * 0.84 / CGFloat(modules.count + 2 * quiet))
+        let area = virtualCamera ? FrameRaster.cropSafeRect(for: size) : CGRect(origin: .zero, size: size)
+        let safeWidth = area.width
+        var moduleWidth: CGFloat = virtualCamera
+            ? max(1, safeWidth * 0.9 / CGFloat(modules.count + 2 * quiet))
             : CGFloat(max(1, Int(size.width * 0.84) / (modules.count + 2 * quiet)))
+        // Below 2 px, snapping fractional edges mixes 1 and 2 px bars, which
+        // no longer scans: use whole pixels there.
+        if moduleWidth < 2 { moduleWidth = moduleWidth.rounded(.down) }
         let barsWidth = CGFloat(modules.count) * moduleWidth
         let barHeight = (min(size.width, size.height) * 0.30).rounded()
-        let fontSize = max(18, (barHeight * 0.16).rounded())
+        var fontSize = max(18, (barHeight * 0.16).rounded())
+        if virtualCamera {
+            fontSize = min(fontSize, (safeWidth * 0.9 / (0.61 * CGFloat(max(1, caption.count)))).rounded(.down))
+        }
         let gap = (fontSize * 0.5).rounded()
         let blockHeight = barHeight + gap + fontSize
-        let x0 = ((size.width - barsWidth) / 2).rounded()
+        let x0 = (area.midX - barsWidth / 2).rounded()
         let yText = ((size.height - blockHeight) / 2).rounded()   // CG: bottom-left origin
         let yBars = yText + fontSize + gap
 
@@ -118,7 +127,7 @@ public enum BarcodeRenderer {
             for (i, bar) in modules.enumerated() where bar {
                 ctx.fill(CGRect(x: edge(i), y: yBars, width: edge(i + 1) - edge(i), height: barHeight))
             }
-            drawCaption(caption, in: ctx, centerX: size.width / 2, baselineY: yText + fontSize * 0.2, fontSize: fontSize)
+            drawCaption(caption, in: ctx, centerX: area.midX, baselineY: yText + fontSize * 0.2, fontSize: fontSize)
         }
     }
 

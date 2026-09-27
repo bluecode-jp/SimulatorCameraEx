@@ -31,6 +31,7 @@ iOS シミュレータにはカメラの仕組みがないため、SimulatorCame
 
 - 有効になったあとに起動したアプリから、カメラが使えます。すでに起動しているアプリは、一度終了してから起動し直してください。Expo CLI の `i` キーやホーム画面からの起動でも有効です。
 - 「iOS Simulator」欄の **Device** で機種を選んで **Launch** を押すと、そのシミュレータを起動して画面を開けます。
+- **Safari** とアプリ内の Web 画面（WKWebView）でも、Web ページの `getUserMedia` でカメラ映像を受け取れます。Safari も、有効になったあとに起動し直してください。カメラの許可ダイアログは出ません。
 
 自動の有効化を使わない場合や、対象のアプリを絞りたい場合は、コマンドで有効にします。
 
@@ -98,6 +99,7 @@ simcamctl sim-launch host.exp.Exponent --url exp://127.0.0.1:8081
   - **Portrait 720×1280**（既定）：縦画面のカメラ表示向けです。画像・QR・動画は全体が収まるように、Mac カメラは中央を縦長に切り抜いて送ります。
   - **Landscape 1280×720**：カメラ映像を横向きで扱うアプリ向けです。
   - Mac の仮想カメラ「SimulatorCamera Virtual」は常に横長です。
+- `sim-enable --app` で対象を絞った場合、Safari で使うには `--app com.apple.mobilesafari` も指定してください。
 - 写真撮影（`AVCapturePhotoOutput`）には対応していません。expo-camera の `takePictureAsync` はシミュレータでは独自のダミー画像を返しますが、他のライブラリでは失敗する可能性があります。
 - フラッシュ・ズーム・フォーカスなどの設定は受け付けますが、映像には反映されません。
 

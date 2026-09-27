@@ -5,7 +5,7 @@
 # Produces (in $1, default build/inject; the Xcode build puts them in
 # SimulatorCamera.app/Contents/Resources/SimCamInject):
 #   SimCamLoader.dylib   DYLD_INSERT_LIBRARIES entry point (libSystem only)
-#   SimCamInject.dylib   AVFoundation hooks + frame source
+#   SimCamInject.dylib   AVFoundation hooks + frame source + web page camera
 #
 
 set -euo pipefail
@@ -23,11 +23,16 @@ xcrun --sdk iphonesimulator clang "${COMMON[@]}" \
     -install_name @rpath/SimCamLoader.dylib \
     "$HERE/SimCamLoader.c" -o "$OUT/SimCamLoader.dylib"
 
-xcrun --sdk iphonesimulator clang "${COMMON[@]}" -fno-objc-arc \
+# The web page shim is compiled in as a byte array (SimCamWebShim_js[]).
+GEN="$(mktemp -d)"
+trap 'rm -rf "$GEN"' EXIT
+(cd "$HERE" && xxd -i SimCamWebShim.js) > "$GEN/SimCamWebShim.js.h"
+
+xcrun --sdk iphonesimulator clang "${COMMON[@]}" -fno-objc-arc -I "$GEN" \
     -install_name @rpath/SimCamInject.dylib \
     -framework Foundation -framework AVFoundation -framework CoreMedia -framework CoreVideo \
-    -framework QuartzCore -framework VideoToolbox -framework CoreGraphics \
-    "$HERE/SimCamInject.m" "$HERE/SimCamFrameSource.m" -o "$OUT/SimCamInject.dylib"
+    -framework QuartzCore -framework VideoToolbox -framework CoreGraphics -framework ImageIO \
+    "$HERE/SimCamInject.m" "$HERE/SimCamFrameSource.m" "$HERE/SimCamWeb.m" -o "$OUT/SimCamInject.dylib"
 
 # SIGN_IDENTITY: the container app's identity when bundled (Xcode passes
 # $EXPANDED_CODE_SIGN_IDENTITY), ad-hoc otherwise. Hardened runtime and a

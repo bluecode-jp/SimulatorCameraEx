@@ -23,10 +23,12 @@
 #import <CoreVideo/CoreVideo.h>
 #import <QuartzCore/QuartzCore.h>
 #import <VideoToolbox/VideoToolbox.h>
+#import <objc/message.h>
 #import <objc/runtime.h>
 #import <os/log.h>
 
 #import "SimCamFrameSource.h"
+#import "SimCamWeb.h"
 
 static os_log_t SCLog(void) {
     static os_log_t log;
@@ -59,6 +61,80 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
     return SCHook(object_getClass(cls), sel, block);
 }
 
+// MARK: - Fake formats
+//
+// Apps that only use presets never look at these, but code that picks a
+// format (WebKit's device list among them) rejects a camera whose max size
+// or frame rate is 0.
+
+@interface SCFrameRateRange : AVFrameRateRange
+@end
+
+@implementation SCFrameRateRange
++ (SCFrameRateRange *)shared {
+    static SCFrameRateRange *range;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ range = class_createInstance([SCFrameRateRange class], 0); });
+    return range;
+}
+- (Float64)minFrameRate { return 1; }
+- (Float64)maxFrameRate { return 30; }
+- (CMTime)minFrameDuration { return CMTimeMake(1, 30); }
+- (CMTime)maxFrameDuration { return CMTimeMake(1, 1); }
+- (NSString *)description { return @"<SCFrameRateRange 1-30>"; }
+@end
+
+@interface SCFormat : AVCaptureDeviceFormat
+@end
+
+@implementation SCFormat {
+    CMVideoFormatDescriptionRef _description;
+    CMVideoDimensions _dimensions;
+}
+
+/// Sensor-style (landscape) sizes, largest first.
++ (NSArray<SCFormat *> *)all {
+    static NSArray *formats;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSMutableArray *list = [NSMutableArray array];
+        int32_t sizes[][2] = { {1280, 720}, {640, 480} };
+        for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++) {
+            SCFormat *format = class_createInstance([SCFormat class], 0);
+            format->_dimensions = (CMVideoDimensions){ sizes[i][0], sizes[i][1] };
+            CMVideoFormatDescriptionCreate(kCFAllocatorDefault, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+                                           sizes[i][0], sizes[i][1], NULL, &format->_description);
+            [list addObject:format];
+        }
+        formats = [list copy];
+    });
+    return formats;
+}
+
+- (AVMediaType)mediaType { return AVMediaTypeVideo; }
+- (CMFormatDescriptionRef)formatDescription { return _description; }
+- (NSArray<AVFrameRateRange *> *)videoSupportedFrameRateRanges { return @[[SCFrameRateRange shared]]; }
+- (float)videoFieldOfView { return 70; }
+- (BOOL)isVideoBinned { return NO; }
+- (BOOL)isVideoStabilizationModeSupported:(AVCaptureVideoStabilizationMode)mode { return mode == AVCaptureVideoStabilizationModeOff; }
+- (CGFloat)videoMaxZoomFactor { return 16; }
+- (CGFloat)videoZoomFactorUpscaleThreshold { return 1; }
+- (float)minISO { return 50; }
+- (float)maxISO { return 800; }
+- (CMTime)minExposureDuration { return CMTimeMake(1, 1000); }
+- (CMTime)maxExposureDuration { return CMTimeMake(1, 30); }
+- (BOOL)isVideoHDRSupported { return NO; }
+- (CMVideoDimensions)highResolutionStillImageDimensions { return _dimensions; }
+- (NSArray<NSValue *> *)supportedMaxPhotoDimensions {
+    return @[[NSValue valueWithBytes:&_dimensions objCType:@encode(CMVideoDimensions)]];
+}
+- (BOOL)isHighestPhotoQualitySupported { return NO; }
+- (BOOL)isMultiCamSupported { return NO; }
+- (NSString *)description {
+    return [NSString stringWithFormat:@"<SCFormat %dx%d 1-30fps>", _dimensions.width, _dimensions.height];
+}
+@end
+
 // MARK: - Fake device
 
 @interface SCDevice : AVCaptureDevice
@@ -69,6 +145,7 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
     AVCaptureExposureMode _exposureMode;
     AVCaptureWhiteBalanceMode _whiteBalanceMode;
     CGFloat _zoom;
+    SCFormat *_activeFormat;   // formats live forever; no retain needed
 }
 
 + (SCDevice *)shared {
@@ -98,9 +175,11 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
 - (BOOL)lockForConfiguration:(NSError **)error { return YES; }
 - (void)unlockForConfiguration {}
 - (BOOL)supportsAVCaptureSessionPreset:(AVCaptureSessionPreset)preset { return YES; }
-- (NSArray<AVCaptureDeviceFormat *> *)formats { return @[]; }
-- (AVCaptureDeviceFormat *)activeFormat { return nil; }
-- (void)setActiveFormat:(AVCaptureDeviceFormat *)format {}
+- (NSArray<AVCaptureDeviceFormat *> *)formats { return [SCFormat all]; }
+- (AVCaptureDeviceFormat *)activeFormat { return _activeFormat ?: [SCFormat all].firstObject; }
+- (void)setActiveFormat:(AVCaptureDeviceFormat *)format {
+    if ([format isKindOfClass:[SCFormat class]]) _activeFormat = (SCFormat *)format;
+}
 - (CMTime)activeVideoMinFrameDuration { return CMTimeMake(1, 30); }
 - (void)setActiveVideoMinFrameDuration:(CMTime)t {}
 - (CMTime)activeVideoMaxFrameDuration { return CMTimeMake(1, 30); }
@@ -867,6 +946,7 @@ static void SCInit(void) {
         SCInstallSessionHooks();
         SCInstallOutputHooks();
         SCInstallPreviewHooks();
+        SCInstallWebKitHooks();
         os_log(SCLog(), "SimCamInject loaded into %{public}@", [[NSBundle mainBundle] bundleIdentifier]);
     }
 }

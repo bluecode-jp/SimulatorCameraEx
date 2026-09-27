@@ -26,8 +26,10 @@ static void simcam_loader_init(void) {
     char exe[PATH_MAX];
     uint32_t size = sizeof(exe);
     if (_NSGetExecutablePath(exe, &size) != 0) return;
-    // Installed apps live under .../data/Containers/Bundle/Application/<UUID>/X.app
-    if (!strstr(exe, "/Containers/Bundle/Application/")) return;
+    // Installed apps live under .../data/Containers/Bundle/Application/<UUID>/X.app.
+    // Safari too, so web pages get the camera through getUserMedia (SimCamWeb.m).
+    if (!strstr(exe, "/Containers/Bundle/Application/")
+        && !strstr(exe, "/MobileSafari.app/MobileSafari")) return;
 
     Dl_info info;
     if (!dladdr((const void *)&simcam_loader_init, &info) || !info.dli_fname) return;

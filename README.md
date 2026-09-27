@@ -7,6 +7,7 @@ iOS シミュレータにはカメラがありません。`AVCaptureDevice.defau
 SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内のアプリにカメラ映像として渡します。アプリは普段どおり AVFoundation でカメラを開くだけです。expo-camera の `onBarcodeScanned` のようなバーコード読み取りも、そのまま動きます。
 
 - アプリ側の変更は不要です。SDK の組み込みも、`Info.plist` の変更も、`#if targetEnvironment(simulator)` の分岐も要りません。
+- シミュレータの **Safari** や、アプリ内の Web 画面（WKWebView）でも、Web ページの `getUserMedia` でカメラ映像を受け取れます。
 - 映像ソースは次のとおりです。
   - テストパターン（カラーバー）
   - Mac のカメラ（複数台から選択可）
@@ -74,6 +75,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 ```
 
 - Android エミュレータは、CMIO 拡張の仮想カメラを Mac のカメラ（`webcamN`）の1台として使います。Android 側への注入はありません。
+- Safari と WKWebView の Web ページには、別の方法で映像を渡します。WebKit はカメラを GPU 用の別プロセスで扱いますが、このプロセスには注入ライブラリを読み込ませられません。そこで、注入ライブラリが Web ページに小さなスクリプト（`SimCamInject/SimCamWebShim.js`）を追加し、`getUserMedia` の映像を Mac から届いたフレームに置き換えます。
 - シミュレータのアプリは、中身は Mac 上で動くプロセスです。そのため localhost（127.0.0.1）で Mac アプリとつながります。
 - 注入ライブラリは入口役（`SimCamLoader.dylib`）と本体（`SimCamInject.dylib`）の2つに分かれています。入口役は、ユーザーがインストールしたアプリにだけ本体を読み込みます。シミュレータのシステムプロセスには本体を読み込みません。
 - どちらのライブラリも、アプリの `Contents/Resources/SimCamInject/` に同梱されています。
@@ -269,7 +271,8 @@ $SIMCAMCTL android-setup Medium_Phone_API_36.0   # AVD の config.ini の hw.cam
 
 ### 注意
 - カメラは**エミュレータの起動時**に決まります。起動中の AVD は、一度終了してから起動し直してください。
-- 仮想カメラの映像は横長（1280×720）です。4:3 で表示するカメラアプリでは左右が少し切れることがあります。
+- 仮想カメラの映像は横長（1280×720）ですが、エミュレータがアプリに渡すのはその一部です（カメラアプリは中央の 3:4、Chrome は中央より少し右の 9:16）。QR・バーコードはどちらにも収まる大きさで、Chrome で中央に見える位置に描きます。そのため、カメラアプリや Mac の仮想カメラでは少し右寄りに見えます。
+- 静止画・動画・Mac カメラは位置を調整しないので、左右が切れて見えます。
 
 ---
 
@@ -290,6 +293,7 @@ $SIMCAMCTL android-setup Medium_Phone_API_36.0   # AVD の config.ini の hw.cam
   - ほかのライブラリでは失敗する可能性があります。
 - フラッシュ・ズーム・フォーカスなどの設定は受け付けますが、映像には反映されません。前後のカメラの切り替えもありません。どちらを選んでも同じ映像です。
 - 音声（マイク）には対応していません。
+- Web ページ（Safari・WKWebView）の `getUserMedia` は、映像だけ差し替えます。カメラの許可ダイアログは出ません。ズームなどの `applyConstraints` は受け付けますが、映像には反映されません。
 - AVFoundation の内部の仕組みに合わせて差し替えているため、iOS シミュレータのバージョンによっては動かない可能性があります。
 - ライブラリの中に `#if targetEnvironment(simulator)` でカメラを無効にするコードがあると、映像はアプリまで届きません。元のリポジトリの `patches/` にある、古い expo-camera / react-native-vision-camera 向けのパッチが必要になる場合があります（未確認）。
 

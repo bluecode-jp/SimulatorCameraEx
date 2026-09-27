@@ -145,6 +145,23 @@ xcrun simctl launch <UDID> <bundle id>               # 5. テストするアプ�
 - 映像の切り替えは、アプリがカメラを開く前でも後でも構いません。
 - 縦画面のアプリは `portrait`（既定）、カメラを横向きで扱うアプリは `landscape` にします（`sim-orientation`）。
 
+### Safari・WKWebView の Web ページ
+
+シミュレータの Safari と、アプリ内の Web 画面（WKWebView）でも、Web ページの `getUserMedia` / `enumerateDevices` にカメラ「SimulatorCamera」が出ます。
+
+```bash
+$SIMCAMCTL set-source --code128 "4570000011"
+xcrun simctl terminate <UDID> com.apple.mobilesafari    # 有効化より前から起動していた場合
+xcrun simctl openurl <UDID> "https://example.com/scan"  # テストするページを開く
+```
+
+- **カメラの許可ダイアログは出ません。** 許可の操作は不要です。
+- 映像は、Mac から届いたフレームを canvas に描いたストリームです（毎秒30コマまで）。ZXing などの読み取りライブラリで、Code 128・EAN-13・QR が読めることを確認しています。
+- 切り替えた映像は、開いているページにもそのまま反映されます。
+- `sim-enable --app` で対象を絞っている場合は、`--app com.apple.mobilesafari` も指定してください。
+- Safari が以前のタブを復元すると、複数のページが同時にカメラを使います。読み取りが不安定なときは、テストするページだけを開いてください。
+- 映像以外（マイク）は、これまでどおり Safari が扱います。
+
 ### iOS で対応していないこと
 - 写真撮影（`AVCapturePhotoOutput`）。expo-camera の `takePictureAsync` は、シミュレータでは独自のダミー画像を返します。
 - 前面と背面の区別。どちらのカメラを選んでも同じ映像です。
@@ -173,7 +190,7 @@ $ADB -s $SERIAL shell am start -n <package>/<activity>           # 5. テスト�
 - エミュレータのログは `~/Library/Logs/SimulatorCamera/emulator-<AVD名>.log` に出ます。
 - **カメラが開いたことの確認**：`$ADB -s $SERIAL shell dumpsys media.camera | grep "Camera ID"` で、開いているカメラが表示されます。
 - 前面カメラはエミュレータの内蔵ダミー（ドット絵の風景）です。前面カメラを使うアプリでは `android-launch <AVD名> --front` で起動します。
-- 仮想カメラ向けの QR・バーコードは、Android のアプリに届く範囲（横長の映像の中央 3:4）に収まる大きさで描かれます。
+- Android エミュレータは、横長の仮想カメラ映像（1280×720）の一部だけをアプリに渡します。カメラアプリは中央の 3:4、Chrome（Web ページ）は中央より少し右の 9:16 です。仮想カメラ向けの QR・バーコードは、どちらにも収まる大きさで、Chrome で中央に見える位置に描きます（カメラアプリでは少し右寄りに見えます）。
 
 ---
 

@@ -31,12 +31,24 @@ public enum FrameRaster {
         return CGRect(x: (bounds.width - w) / 2, y: (bounds.height - h) / 2, width: w, height: h)
     }
 
-    /// Part of a frame that survives a centered portrait 3:4 crop. The
-    /// Android Emulator hands a landscape webcam to portrait apps as a
-    /// 3:4 crop of its middle (only 540 of 1280 px), so codes generated for
-    /// the virtual camera are sized to this area, quiet zones included.
-    public static func cropSafeSize(for size: CGSize) -> CGSize {
-        CGSize(width: min(size.width, (size.height * 3 / 4).rounded(.down)), height: size.height)
+    /// Where codes generated for the virtual camera go: the part of a
+    /// landscape frame that survives the Android Emulator's crops. The
+    /// emulator hands the landscape virtual camera to portrait apps as a
+    /// full-height crop (measured on Emulator 37.1, 1280x720):
+    ///   - 3:4 for the camera app: 540 px, centered (x 370…910)
+    ///   - 9:16 for Chrome's 1280x720 requests: 405 px whose center sits
+    ///     67 px right of the middle (x 506…909)
+    /// The area is Chrome's strip, so codes look centered in web apps (the
+    /// camera app shows them a little right of center), trimmed to what the
+    /// 3:4 crop also shows: x 506…908 at 1280x720, quiet zones included.
+    /// Portrait frames are narrower than any crop: the whole frame.
+    public static func cropSafeRect(for size: CGSize) -> CGRect {
+        guard size.width > size.height else { return CGRect(origin: .zero, size: size) }
+        let centerX = size.width / 2 + size.height * 67 / 720
+        let chromeHalf = size.height * 9 / 32
+        let threeByFourRight = size.width / 2 + size.height * 3 / 8
+        let half = min(chromeHalf, threeByFourRight - centerX).rounded(.down)
+        return CGRect(x: centerX - half, y: 0, width: 2 * half, height: size.height)
     }
 
     /// Canonical frame size (what the CMIO extension accepts).

@@ -99,6 +99,9 @@ targets:
           - $(SRCROOT)/SimCamInject/SimCamInject.m
           - $(SRCROOT)/SimCamInject/SimCamFrameSource.m
           - $(SRCROOT)/SimCamInject/SimCamFrameSource.h
+          - $(SRCROOT)/SimCamInject/SimCamWeb.m
+          - $(SRCROOT)/SimCamInject/SimCamWeb.h
+          - $(SRCROOT)/SimCamInject/SimCamWebShim.js
         outputFiles:
           - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/SimCamInject/SimCamLoader.dylib
           - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/SimCamInject/SimCamInject.dylib
