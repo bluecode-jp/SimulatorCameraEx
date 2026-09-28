@@ -15,8 +15,8 @@ Requires macOS 14+, Xcode 16+, and [XcodeGen](https://github.com/yonaskolb/Xcode
 (`brew install xcodegen`).
 
 ```bash
-git clone https://github.com/dautovri/SimulatorCamera.git
-cd SimulatorCamera
+git clone https://github.com/bluecode-jp/SimulatorCameraEx.git
+cd SimulatorCameraEx
 xcodegen generate                 # regenerate .xcodeproj from project.yml
 open SimulatorCamera.xcodeproj
 ```

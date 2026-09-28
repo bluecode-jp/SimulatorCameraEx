@@ -90,7 +90,7 @@ git push origin main vX.Y.Z
      --title "SimulatorCameraEx $V" --notes-file <リリースノート> \
      dist/SimulatorCameraEx-$V.dmg dist/SimulatorCameraEx-$V.zip dist/SimulatorCameraEx-$V.sha256
    ```
-   - `-R bluecode-jp/SimulatorCameraEx` を必ず付けてください。この clone には元のプロジェクトが `upstream` として登録されているため、付けないと `gh` がそちらを対象にすることがあります（`gh repo set-default bluecode-jp/SimulatorCameraEx` を一度実行しておくと安全です）。
+   - `-R bluecode-jp/SimulatorCameraEx` を付けて、対象のリポジトリを明示してください（元のプロジェクトをリモートとして追加している clone では、`gh` がそちらを対象にすることがあります）。
 2. tap の `Casks/simulatorcameraex.rb` の `version` と `sha256`（DMG のもの。`dist/SimulatorCameraEx-X.Y.Z.sha256` の1行目）を更新して、コミット・プッシュします。
 3. チェックして、実際に入れてみます。
    ```bash

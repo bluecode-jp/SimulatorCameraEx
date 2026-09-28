@@ -23,7 +23,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 
 ## SimulatorCamera を拡張しています
 
-このリポジトリは [dautovri/SimulatorCamera](https://github.com/dautovri/SimulatorCamera)（MIT ライセンス）をもとに拡張したものです。元の履歴はそのまま残しており、`upstream` リモートとして参照できます。
+このリポジトリは [dautovri/SimulatorCamera](https://github.com/dautovri/SimulatorCamera)（MIT ライセンス）をもとに拡張したものです。元の履歴はそのまま残しています（元の最後のコミットは `db69036`）。
 
 ### SimulatorCamera との違い
 
@@ -48,7 +48,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 - 縦向きの動画が上下逆さまに映った
 - CLI が毎回「受け取られなかった」と誤ってエラーを出していた
 
-変更の一覧は git の履歴（`git log upstream/main..main`）で確認できます。
+変更の一覧は git の履歴（`git log db69036..main`）で確認できます。
 
 ---
 
