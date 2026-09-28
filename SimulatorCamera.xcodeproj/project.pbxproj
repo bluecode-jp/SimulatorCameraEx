@@ -12,6 +12,7 @@
 		0DDB158193078FB26D946A7D /* AndroidEmulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE843D71E3077B25D6C78FF9 /* AndroidEmulator.swift */; };
 		123734FDBD4B874EC803EC0B /* CameraContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED1C6F161452746D401A561 /* CameraContract.swift */; };
 		15791A539F2708C098E31D62 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6DB0DCE94EADD660FAB81A /* ImageSource.swift */; };
+		16E5D0EB5AC31F7D064DB470 /* BarcodePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 430443095F37C8880BAF42B5 /* BarcodePreviewView.swift */; };
 		179FDC3A8B0E644F699454C4 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79EB81F6F0FA26FC8C0D512B /* main.swift */; };
 		27BFA0EF48E103E7E4B36D47 /* SimulatorInjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B87B0329FCDB57DA155712 /* SimulatorInjection.swift */; };
 		2AB97A0BCC2C375207D8AFD6 /* FrameRaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F22D3D2109AC909C586B1F9 /* FrameRaster.swift */; };
@@ -82,10 +83,10 @@
 		0B57033FD09FA6582F57FF37 /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = ../Library/SystemExtensions;
-			dstSubfolderSpec = 13;
+			dstPath = "";
+			dstSubfolderSpec = 6;
 			files = (
-				79393074F69A438E4A0665DC /* SimulatorCameraExtension.systemextension in Embed Dependencies */,
+				B7D4DF4D9F8B0DF144F15BA1 /* simcamctl in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -93,10 +94,10 @@
 		4AACD8F0F143DE3CA8F7D170 /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 6;
+			dstPath = ../Library/SystemExtensions;
+			dstSubfolderSpec = 13;
 			files = (
-				B7D4DF4D9F8B0DF144F15BA1 /* simcamctl in Embed Dependencies */,
+				79393074F69A438E4A0665DC /* SimulatorCameraExtension.systemextension in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -114,6 +115,7 @@
 		34DBFC0A082BB7CE216717D6 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		37304038FE36D2D1035F449C /* CameraLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraLink.swift; sourceTree = "<group>"; };
 		382C35DD80E3AE7C84200CC3 /* QRRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRRenderer.swift; sourceTree = "<group>"; };
+		430443095F37C8880BAF42B5 /* BarcodePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodePreviewView.swift; sourceTree = "<group>"; };
 		43B87B0329FCDB57DA155712 /* SimulatorInjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorInjection.swift; sourceTree = "<group>"; };
 		45E9F3278B1A90A9EEE810BD /* AppControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppControl.swift; sourceTree = "<group>"; };
 		4F36CFC13EBA8752E4B0A6C2 /* MacCameraSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacCameraSource.swift; sourceTree = "<group>"; };
@@ -217,6 +219,7 @@
 				DD43FD4C5D4295A5B04AB587 /* AndroidEmulatorCard.swift */,
 				DCE77BA32C83D30E6F389FEC /* App.swift */,
 				D0F6334A3ECFAC35CE2A89BC /* Assets.xcassets */,
+				430443095F37C8880BAF42B5 /* BarcodePreviewView.swift */,
 				A8B703546D7440C3B3E8DFA4 /* BarcodeSource.swift */,
 				37304038FE36D2D1035F449C /* CameraLink.swift */,
 				F37AD8D1038AFAD626489CDE /* ControlServer.swift */,
@@ -411,6 +414,7 @@
 				7E7CCBF4BF45E49EE8C20F45 /* AndroidEmulator.swift in Sources */,
 				81AD8BFD5BBCC6384F7FADA4 /* AndroidEmulatorCard.swift in Sources */,
 				C45434EC9AC1413E7A3F2336 /* App.swift in Sources */,
+				16E5D0EB5AC31F7D064DB470 /* BarcodePreviewView.swift in Sources */,
 				F72B9D33ACE103F34B28A39B /* BarcodeRenderer.swift in Sources */,
 				316F89289C2E6446CB779CF8 /* BarcodeSource.swift in Sources */,
 				C19164B157204DEC18FE9AEA /* CMIOSinkClient.swift in Sources */,

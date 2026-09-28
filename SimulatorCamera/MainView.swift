@@ -16,6 +16,7 @@ struct MainView: View {
     @Environment(CameraLink.self) private var link
     @Environment(SourceManager.self) private var sourceManager
     @Environment(SimulatorAutoEnabler.self) private var simulatorAutoEnabler
+    @Environment(\.openWindow) private var openWindow
     @State private var simulatorOrientation = SimulatorFeed.shared.orientation
     /// Cameras for the Mac Camera picker, as (uniqueID, name).
     @State private var cameras: [(id: String, name: String)] = []
@@ -57,7 +58,8 @@ struct MainView: View {
     private func fitWindow(toContentHeight height: CGFloat) {
         guard height > 0 else { return }
         DispatchQueue.main.async {
-            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }),
+            // Only the main window: preview windows keep their own size.
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil && $0.title == "SimulatorCameraEx" }),
                   let screen = window.screen ?? NSScreen.main else { return }
             if let fitted = fittedWindowHeight, abs(window.frame.height - fitted) > 1 { return }  // user resized
             let chrome = window.frame.height - window.contentLayoutRect.height
@@ -353,9 +355,10 @@ struct MainView: View {
                           valid: code != nil)
     }
 
-    /// Title on its own line, then field + button in one row so the button
-    /// is vertically centred on the text field (not on title and field
-    /// together, which pushed it up).
+    /// Title on its own line, then field + buttons in one row so the buttons
+    /// are vertically centred on the text field (not on title and field
+    /// together, which pushed them up). Inject switches the source; Preview
+    /// opens a window showing the frame simulator apps would get.
     private func payloadRow(
         _ kind: SimCamSourceKind,
         icon: String,
@@ -377,9 +380,12 @@ struct MainView: View {
                     TextField(placeholder, text: text)
                         .textFieldStyle(.roundedBorder)
                         .font(.caption)
-                    Button("Generate") { switchSource(kind) }
+                    Button("Inject") { switchSource(kind) }
                         .controlSize(.small)
                         .disabled(isEmpty || !valid || sourceManager.isSwitching)
+                    Button("Preview") { openWindow(value: kind) }
+                        .controlSize(.small)
+                        .disabled(isEmpty)
                 }
                 if let note {
                     Text(note)

@@ -40,5 +40,14 @@ struct SimulatorCameraApp: App {
                 }
         }
         .windowResizability(.contentSize)
+
+        // One preview window per code kind (QR Code, Code 128, EAN-13).
+        WindowGroup("Preview", for: SimCamSourceKind.self) { $kind in
+            if let kind {
+                BarcodePreviewView(kind: kind)
+                    .environment(sourceManager)
+            }
+        }
+        .defaultSize(width: 360, height: 640)
     }
 }
