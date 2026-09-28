@@ -72,14 +72,32 @@ Mac アプリ（カメラ拡張・`simcamctl`・SimCamInject 同梱）を、Deve
    ```
 5. iOS シミュレータでカメラを使うアプリを開き、映像とバーコード読み取りを確認します。
 
-## 6. タグを付けて公開する
+## 6. タグを付ける
 
 ```bash
 git tag -a vX.Y.Z -m "SimulatorCameraEx vX.Y.Z"
 git push origin main vX.Y.Z
 ```
 
-DMG・ZIP・sha256 は、GitHub の Releases（`bluecode-jp/SimulatorCameraEx`）などに置きます。
+## 7. Homebrew で公開する
+
+配布物は公開リポジトリ [bluecode-jp/homebrew-tap](https://github.com/bluecode-jp/homebrew-tap) に置きます（`bluecode-jp/SimulatorCameraEx` は非公開なので、そこに置いても利用者はダウンロードできません）。
+
+1. tap の Releases に DMG・ZIP・sha256 を上げます。タグ名は `simulatorcameraex-X.Y.Z` です（Cask の `url` と livecheck がこの形を前提にしています）。
+   ```bash
+   V=X.Y.Z
+   gh release create simulatorcameraex-$V -R bluecode-jp/homebrew-tap \
+     --title "SimulatorCameraEx $V" --notes "brew upgrade --cask simulatorcameraex" \
+     dist/SimulatorCameraEx-$V.dmg dist/SimulatorCameraEx-$V.zip dist/SimulatorCameraEx-$V.sha256
+   ```
+2. tap の `Casks/simulatorcameraex.rb` の `version` と `sha256`（DMG のもの。`dist/SimulatorCameraEx-X.Y.Z.sha256` の1行目）を更新して、コミット・プッシュします。
+3. チェックして、実際に入れてみます。
+   ```bash
+   brew update
+   brew style bluecode-jp/tap/simulatorcameraex
+   brew audit --cask --online bluecode-jp/tap/simulatorcameraex
+   brew upgrade --cask simulatorcameraex      # 初めての Mac では brew install --cask bluecode-jp/tap/simulatorcameraex
+   ```
 
 ## うまくいかないとき
 

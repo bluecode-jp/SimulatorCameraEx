@@ -21,6 +21,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **リリース手順を追加。** `scripts/archive-release.sh`（アーカイブを作り Organizer で開く）と
   `scripts/package-dmg.sh`（公証済みのアプリから DMG・ZIP を作る）。署名と公証は Organizer の
   Direct Distribution で、クラウド管理の Developer ID 証明書を使います。手順は RELEASING.md。
+- **Homebrew で配布。** `brew install --cask bluecode-jp/tap/simulatorcameraex`。Cask と DMG は
+  公開リポジトリ `bluecode-jp/homebrew-tap` に置きます（本体リポジトリは非公開のため）。元の
+  SimulatorCamera 向けだった `Casks/simulatorcamera.rb` は削除しました。
 
 ### Changed
 - **Frame transport rewritten on CoreMediaIO sink streams.** The v1.0.0 design

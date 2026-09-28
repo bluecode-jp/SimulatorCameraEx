@@ -96,7 +96,17 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 
 ## セットアップ
 
-### A. 配布用 DMG から入れる
+### A. Homebrew で入れる（おすすめ）
+
+```bash
+brew install --cask bluecode-jp/tap/simulatorcameraex
+```
+
+- `/Applications/SimulatorCameraEx.app` と、コマンドラインツール `simcamctl`（`/opt/homebrew/bin/simcamctl`）が入ります。
+- 更新は `brew upgrade --cask simulatorcameraex` です。
+- 配布用の tap は [bluecode-jp/homebrew-tap](https://github.com/bluecode-jp/homebrew-tap)（公開リポジトリ）です。署名・公証済みのアプリと Cask だけを置いています。
+
+### B. 配布用 DMG から入れる
 
 配布用 DMG（`SimulatorCameraEx-<version>.dmg`）を受け取った人は、[INSTALL.md](INSTALL.md) の手順に沿って入れてください。
 
@@ -105,7 +115,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 
 アプリは BLUECODE,INC. の Developer ID で署名し、Apple の公証を受けています。ダウンロードしたものでも、警告なしで開けます。
 
-### B. ソースからビルドする
+### C. ソースからビルドする
 
 ```bash
 git clone https://github.com/bluecode-jp/SimulatorCameraEx.git

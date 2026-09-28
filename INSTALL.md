@@ -12,6 +12,18 @@ iOS シミュレータと Android エミュレータのアプリにカメラ映�
 
 ## インストール
 
+### Homebrew で入れる（おすすめ）
+
+```bash
+brew install --cask bluecode-jp/tap/simulatorcameraex
+```
+
+- `/Applications/SimulatorCameraEx.app` と、コマンドラインツール `simcamctl` が入ります（PATH も通ります）。
+- 更新：`brew upgrade --cask simulatorcameraex`
+- アンインストール：下の「アンインストール」の手順1〜3をしてから `brew uninstall --cask simulatorcameraex`（設定ファイルも消す場合は `--zap` を付ける）
+
+### DMG から入れる
+
 1. `SimulatorCameraEx-<version>.dmg` を開き、`SimulatorCameraEx.app` を **/Applications** にコピーします。
    - アプリは BLUECODE,INC. の Developer ID で署名し、Apple の公証を受けています。ダウンロードしたものでも、警告なしで開けます。
    - カメラ拡張は /Applications にあるアプリからしか有効にできません。必ず /Applications にコピーしてください。
@@ -139,6 +151,6 @@ Mac の仮想カメラ「SimulatorCamera Virtual」は、Android エミュレー
 1. 仮想カメラを有効にしていた場合は、SimulatorCameraEx アプリで **Deactivate** をクリックします。
 2. シミュレータで有効化していた場合は `simcamctl sim-disable` を実行します（またはシミュレータを再起動）。
 3. `android-setup` を実行した AVD は、Android Studio の Device Manager でカメラの設定を元に戻します。
-4. `/Applications/SimulatorCameraEx.app` と、作成した場合は `~/.local/bin/simcamctl` を削除します。
+4. `/Applications/SimulatorCameraEx.app` と、作成した場合は `~/.local/bin/simcamctl` を削除します（Homebrew で入れた場合は `brew uninstall --cask simulatorcameraex`）。
    - 手順1をせずにアプリを Finder でゴミ箱に入れた場合も、macOS がカメラ拡張を自動で削除します（完全に消えるのは Mac の再起動後です）。
    - アプリを置き換えるだけのとき（更新）は、Deactivate は不要です。ただし古いアプリを Finder でゴミ箱に入れると拡張も消えるので、新しいアプリで **Activate** をやり直してください。
