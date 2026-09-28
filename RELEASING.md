@@ -79,25 +79,28 @@ git tag -a vX.Y.Z -m "SimulatorCameraEx vX.Y.Z"
 git push origin main vX.Y.Z
 ```
 
-## 7. Homebrew で公開する
+## 7. GitHub Releases と Homebrew で公開する
 
-配布物は公開リポジトリ [bluecode-jp/homebrew-tap](https://github.com/bluecode-jp/homebrew-tap) に置きます（`bluecode-jp/SimulatorCameraEx` は非公開なので、そこに置いても利用者はダウンロードできません）。
+配布ファイルは本体リポジトリの Releases に置き、tap [bluecode-jp/homebrew-tap](https://github.com/bluecode-jp/homebrew-tap) には Cask だけを置きます。
 
-1. tap の Releases に DMG・ZIP・sha256 を上げます。タグ名は `simulatorcameraex-X.Y.Z` です（Cask の `url` と livecheck がこの形を前提にしています）。
+1. 手順6のタグ `vX.Y.Z` で、本体リポジトリにリリースを作り、DMG・ZIP・sha256 を添付します。Cask の `url` はこのタグ名とファイル名を前提にしています。
    ```bash
    V=X.Y.Z
-   gh release create simulatorcameraex-$V -R bluecode-jp/homebrew-tap \
-     --title "SimulatorCameraEx $V" --notes "brew upgrade --cask simulatorcameraex" \
+   gh release create v$V -R bluecode-jp/SimulatorCameraEx --verify-tag --latest \
+     --title "SimulatorCameraEx $V" --notes-file <リリースノート> \
      dist/SimulatorCameraEx-$V.dmg dist/SimulatorCameraEx-$V.zip dist/SimulatorCameraEx-$V.sha256
    ```
+   - `-R bluecode-jp/SimulatorCameraEx` を必ず付けてください。この clone には元のプロジェクトが `upstream` として登録されているため、付けないと `gh` がそちらを対象にすることがあります（`gh repo set-default bluecode-jp/SimulatorCameraEx` を一度実行しておくと安全です）。
 2. tap の `Casks/simulatorcameraex.rb` の `version` と `sha256`（DMG のもの。`dist/SimulatorCameraEx-X.Y.Z.sha256` の1行目）を更新して、コミット・プッシュします。
 3. チェックして、実際に入れてみます。
    ```bash
    brew update
    brew style bluecode-jp/tap/simulatorcameraex
    brew audit --cask --online bluecode-jp/tap/simulatorcameraex
+   brew livecheck --cask bluecode-jp/tap/simulatorcameraex   # 最新のリリースを検出するか
    brew upgrade --cask simulatorcameraex      # 初めての Mac では brew install --cask bluecode-jp/tap/simulatorcameraex
    ```
+   - リリース直後は、ダウンロードが数秒ほど 404 になることがあります。少し待ってから試してください。
 
 ## うまくいかないとき
 

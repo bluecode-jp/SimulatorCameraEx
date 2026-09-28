@@ -104,7 +104,7 @@ brew install --cask bluecode-jp/tap/simulatorcameraex
 
 - `/Applications/SimulatorCameraEx.app` と、コマンドラインツール `simcamctl`（`/opt/homebrew/bin/simcamctl`）が入ります。
 - 更新は `brew upgrade --cask simulatorcameraex` です。
-- 配布用の tap は [bluecode-jp/homebrew-tap](https://github.com/bluecode-jp/homebrew-tap)（公開リポジトリ）です。署名・公証済みのアプリと Cask だけを置いています。
+- 配布ファイル（DMG・ZIP）は、このリポジトリの [Releases](https://github.com/bluecode-jp/SimulatorCameraEx/releases) に置いています。Homebrew の Cask は [bluecode-jp/homebrew-tap](https://github.com/bluecode-jp/homebrew-tap) にあります。
 
 ### B. 配布用 DMG から入れる
 

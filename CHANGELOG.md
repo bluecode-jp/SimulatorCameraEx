@@ -7,6 +7,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### 運用
+- **リポジトリを公開しました。** 配布ファイル（DMG・ZIP）は、このリポジトリの Releases（`vX.Y.Z`）に
+  置きます。tap `bluecode-jp/homebrew-tap` には Cask だけを置き、Cask のダウンロード元もこちらに
+  変えました（インストールのコマンドは変わりません）。
+
 ## SimulatorCameraEx 1.0.1 — 2026-09-28
 
 ### 追加・変更

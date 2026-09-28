@@ -24,6 +24,8 @@ brew install --cask bluecode-jp/tap/simulatorcameraex
 
 ### DMG から入れる
 
+DMG は [Releases](https://github.com/bluecode-jp/SimulatorCameraEx/releases) からダウンロードできます。
+
 1. `SimulatorCameraEx-<version>.dmg` を開き、`SimulatorCameraEx.app` を **/Applications** にコピーします。
    - アプリは BLUECODE,INC. の Developer ID で署名し、Apple の公証を受けています。ダウンロードしたものでも、警告なしで開けます。
    - カメラ拡張は /Applications にあるアプリからしか有効にできません。必ず /Applications にコピーしてください。
