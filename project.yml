@@ -163,7 +163,10 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         ENABLE_HARDENED_RUNTIME: YES
-        SKIP_INSTALL: NO
+        # Shipped only inside the app (Contents/MacOS). Installing it to
+        # /usr/local/bin as well would make the archive a generic one that
+        # Xcode cannot export with Developer ID.
+        SKIP_INSTALL: YES
 
   # Logic tests for the wire contract shared by all three binaries. Compiles
   # the Shared sources directly (no host app needed), so it runs unsigned on

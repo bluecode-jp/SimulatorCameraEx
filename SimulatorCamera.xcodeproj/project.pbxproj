@@ -615,7 +615,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.simcamctl;
 				PRODUCT_NAME = simcamctl;
 				SDKROOT = macosx;
-				SKIP_INSTALL = NO;
+				SKIP_INSTALL = YES;
 			};
 			name = Debug;
 		};
@@ -706,7 +706,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = jp.co.bluecode.simcamctl;
 				PRODUCT_NAME = simcamctl;
 				SDKROOT = macosx;
-				SKIP_INSTALL = NO;
+				SKIP_INSTALL = YES;
 			};
 			name = Release;
 		};
