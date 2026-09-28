@@ -1,5 +1,7 @@
 # SimulatorCameraEx
 
+このリポジトリは [dautovri/SimulatorCamera](https://github.com/dautovri/SimulatorCamera)（MIT ライセンス）をもとに拡張したものです。元の履歴はそのまま残しています（元の最後のコミットは `db69036`）。
+
 > iOS シミュレータのアプリに「カメラ」を。QR・バーコード・画像・動画・Mac のカメラを、アプリのコードを変えずにカメラ映像として渡します。
 
 iOS シミュレータにはカメラがありません。`AVCaptureDevice.default(for: .video)` は `nil` を返し、QR やバーコードを読むアプリは、シミュレータではカメラ画面が真っ暗になります。
@@ -21,11 +23,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 
 ---
 
-## SimulatorCamera を拡張しています
-
-このリポジトリは [dautovri/SimulatorCamera](https://github.com/dautovri/SimulatorCamera)（MIT ライセンス）をもとに拡張したものです。元の履歴はそのまま残しています（元の最後のコミットは `db69036`）。
-
-### SimulatorCamera との違い
+## SimulatorCamera との違い
 
 | 項目 | SimulatorCamera（元） | SimulatorCameraEx（このリポジトリ） |
 |---|---|---|
