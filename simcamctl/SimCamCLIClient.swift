@@ -25,7 +25,7 @@ final class SimCamCLIClient {
         do {
             try client.attach()
         } catch {
-            fail("\(error.localizedDescription) Run /Applications/SimulatorCamera.app and click Activate.", code: 2)
+            fail("\(error.localizedDescription) Run /Applications/SimulatorCameraEx.app and click Activate.", code: 2)
         }
     }
 

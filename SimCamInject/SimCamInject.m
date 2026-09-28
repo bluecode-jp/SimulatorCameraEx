@@ -37,7 +37,7 @@ static os_log_t SCLog(void) {
     return log;
 }
 
-static NSString *const kSCDeviceUniqueID = @"jp.co.bluecode.SimulatorCamera.inject";
+static NSString *const kSCDeviceUniqueID = @"jp.co.bluecode.SimulatorCameraEx.inject";
 
 // MARK: - Swizzling helpers
 

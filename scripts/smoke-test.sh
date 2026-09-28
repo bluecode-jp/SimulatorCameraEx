@@ -40,11 +40,11 @@ xcodebuild -project SimulatorCamera.xcodeproj \
 ok "Container app + extension build."
 
 say "systemextensionsctl list"
-if systemextensionsctl list | grep -q "jp.co.bluecode.SimulatorCamera.Extension"; then
+if systemextensionsctl list | grep -q "jp.co.bluecode.SimulatorCameraEx.Extension"; then
     ok "Extension is registered with macOS."
 else
     warn "Extension not registered yet."
-    warn "Launch SimulatorCamera.app once and click Activate, then approve in"
+    warn "Launch SimulatorCameraEx.app once and click Activate, then approve in"
     warn "System Settings → General → Login Items & Extensions."
 fi
 

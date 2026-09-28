@@ -22,13 +22,13 @@ final class MacCameraSource: NSObject, FrameSource, AVCaptureVideoDataOutputSamp
     var onFeedFrame: ((CVPixelBuffer) -> Void)?
 
     private let session = AVCaptureSession()
-    private let sessionQueue = DispatchQueue(label: "jp.co.bluecode.SimulatorCamera.maccamera.session")
+    private let sessionQueue = DispatchQueue(label: "jp.co.bluecode.SimulatorCameraEx.maccamera.session")
     private let outputQueue = DispatchQueue(
-        label: "jp.co.bluecode.SimulatorCamera.maccamera.output",
+        label: "jp.co.bluecode.SimulatorCameraEx.maccamera.output",
         qos: .userInteractive
     )
     private let normalizer = FrameNormalizer()
-    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "mac-camera")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx", category: "mac-camera")
 
     /// uniqueID of the camera to open; nil (or unplugged) picks the default.
     private let deviceID: String?

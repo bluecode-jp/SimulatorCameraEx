@@ -17,7 +17,7 @@ import Observation
 import OSLog
 import SystemExtensions
 
-private let extensionBundleIdentifier = "jp.co.bluecode.SimulatorCamera.Extension"
+private let extensionBundleIdentifier = "jp.co.bluecode.SimulatorCameraEx.Extension"
 
 @Observable
 @MainActor
@@ -37,7 +37,7 @@ final class ExtensionController: NSObject {
     private(set) var state: State = .unknown
     private(set) var lastMessage: String = ""
 
-    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "extension")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx", category: "extension")
 
     /// Set when an activation replaced an older extension build.
     private var didReplaceExtension = false

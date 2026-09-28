@@ -39,7 +39,7 @@ func usage() -> Never {
       set-source --camera [NAME]   Stream a Mac camera (NAME = part of its name
                                    or its ID, see list-cameras)      [needs the app]
       list-cameras                 List Mac cameras (* = selected)   [needs the app]
-                                   With SimulatorCamera.app running, set-source goes
+                                   With SimulatorCameraEx.app running, set-source goes
                                    through the app and reaches iOS Simulator apps too.
 
     iOS SIMULATOR (camera for apps in the Simulator, via SimCamInject.dylib):
@@ -51,7 +51,7 @@ func usage() -> Never {
       sim-orientation portrait|landscape
                                    Shape of frames sent to simulator apps [needs the app]
       All sim-* commands take --device UDID (default: booted). Frames come from
-      the running SimulatorCamera.app; pick the source there.
+      the running SimulatorCameraEx.app; pick the source there.
 
     ANDROID EMULATOR (the virtual camera as an Android camera, no injection):
       android-list                 List AVDs and the camera's emulator label (webcamN)
@@ -71,7 +71,7 @@ func usage() -> Never {
     The container app must be installed and the extension activated. Frame pushes
     (--qr, --image) open the camera's sink stream and may trigger a one-time
     camera-access prompt for your terminal. If status
-    shows the extension is inactive, run /Applications/SimulatorCamera.app to
+    shows the extension is inactive, run /Applications/SimulatorCameraEx.app to
     activate it.
     """
     FileHandle.standardError.write(Data(helpText.utf8))
@@ -106,14 +106,14 @@ case "status":
         print("app source:        \(app["source"] ?? "?")")
         print("simulator apps:    \(app["simulatorApps"] ?? 0) connected (\(app["orientation"] ?? "?") frames)")
     } else {
-        print("app:               SimulatorCamera.app not running")
+        print("app:               SimulatorCameraEx.app not running")
     }
     cli.runStatus()
 
 case "list-cameras":
     guard let reply = AppControl.request(["command": "list-cameras"]), reply["ok"] as? Bool == true,
           let cameras = reply["cameras"] as? [[String: Any]] else {
-        FileHandle.standardError.write(Data("error: SimulatorCamera.app is not running\n".utf8))
+        FileHandle.standardError.write(Data("error: SimulatorCameraEx.app is not running\n".utf8))
         exit(1)
     }
     for camera in cameras {
@@ -128,7 +128,7 @@ case "sim-orientation":
         exit(3)
     }
     guard let reply = AppControl.request(["command": "set-orientation", "orientation": args[2]]) else {
-        FileHandle.standardError.write(Data("error: SimulatorCamera.app is not running\n".utf8))
+        FileHandle.standardError.write(Data("error: SimulatorCameraEx.app is not running\n".utf8))
         exit(1)
     }
     AppControl.finish(reply, success: "simulator frames: \(args[2])")
@@ -170,9 +170,9 @@ case "set-source":
     }
     if let reply = AppControl.request(["command": "set-source"].merging(request) { $1 }) {
         let apps = reply["simulatorApps"] as? Int ?? 0
-        AppControl.finish(reply, success: "source: \(reply["source"] ?? flag) (via SimulatorCamera.app; \(apps) simulator app(s) connected)")
+        AppControl.finish(reply, success: "source: \(reply["source"] ?? flag) (via SimulatorCameraEx.app; \(apps) simulator app(s) connected)")
     }
-    FileHandle.standardError.write(Data("note: SimulatorCamera.app is not running; pushing to the Mac virtual camera only (iOS Simulator apps will not see it).\n".utf8))
+    FileHandle.standardError.write(Data("note: SimulatorCameraEx.app is not running; pushing to the Mac virtual camera only (iOS Simulator apps will not see it).\n".utf8))
     switch flag {
     case "--pattern": cli.runSetSource(.testPattern)
     case "--qr": cli.runSetQR(payload: need("a payload string"))
@@ -180,7 +180,7 @@ case "set-source":
     case "--ean": cli.runSetBarcode(payload: need("1–12 digits or a 13-digit EAN"), symbology: .ean13)
     case "--image": cli.runSetImage(path: need("a file path"))
     default:
-        FileHandle.standardError.write(Data("error: \(flag) needs SimulatorCamera.app running\n".utf8))
+        FileHandle.standardError.write(Data("error: \(flag) needs SimulatorCameraEx.app running\n".utf8))
         exit(1)
     }
 

@@ -34,7 +34,7 @@ final class SimulatorAutoEnabler {
     private(set) var enabledDevices: [String] = []
     private(set) var lastError: String?
 
-    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "sim-auto-enable")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx", category: "sim-auto-enable")
     private var task: Task<Void, Never>?
     private var handled: Set<String> = []
 
@@ -93,7 +93,7 @@ final class SimulatorAutoEnabler {
         for (udid, name) in booted where !alreadyHandled.contains(udid) {
             if simctl(["spawn", udid, "launchctl", "setenv", "DYLD_INSERT_LIBRARIES", loader]) != nil {
                 enabled.append(udid)
-                Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "sim-auto-enable")
+                Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx", category: "sim-auto-enable")
                     .info("camera injection enabled in \(name, privacy: .public) (\(udid, privacy: .public))")
             } else {
                 error = "could not enable the camera in \(name)"

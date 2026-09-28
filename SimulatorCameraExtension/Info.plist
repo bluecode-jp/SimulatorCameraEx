@@ -23,7 +23,7 @@
 	<key>CMIOExtension</key>
 	<dict>
 		<key>CMIOExtensionMachServiceName</key>
-		<string>$(TeamIdentifierPrefix)jp.co.bluecode.SimulatorCamera.Extension</string>
+		<string>$(TeamIdentifierPrefix)jp.co.bluecode.SimulatorCameraEx.Extension</string>
 	</dict>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>

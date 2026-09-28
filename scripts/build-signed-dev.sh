@@ -4,8 +4,8 @@
 #                       signing using the existing ASC API key. No Xcode UI
 #                       account login required.
 #
-# Uses the bundle IDs registered in App Store Connect (jp.co.bluecode.SimulatorCamera
-# and jp.co.bluecode.SimulatorCamera.Extension) under team C5TUJ8526Z. The
+# Uses the bundle IDs registered in App Store Connect (jp.co.bluecode.SimulatorCameraEx
+# and jp.co.bluecode.SimulatorCameraEx.Extension) under team C5TUJ8526Z. The
 # SYSTEM_EXTENSION_INSTALL capability is already enabled on those bundle IDs.
 #
 # Run this every time you want a fresh signed dev build. Re-running creates
@@ -43,7 +43,7 @@ fi
 # elsewhere; documented in the activation diagnostic.
 
 # Kill any running instance so the build doesn't hit "in use" errors
-pkill -f "SimulatorCamera.app/Contents/MacOS/SimulatorCamera" 2>/dev/null || true
+pkill -f "SimulatorCameraEx.app/Contents/MacOS/SimulatorCameraEx" 2>/dev/null || true
 
 echo "▶︎ xcodebuild signed dev build (team $TEAM_ID)"
 xcodebuild build \
@@ -59,8 +59,8 @@ xcodebuild build \
     2>&1 | (xcpretty --simple || cat)
 
 # Locate the .app
-APP=$(find /Volumes/nvme/xcode/Debug /tmp -name "SimulatorCamera.app" -type d -maxdepth 3 2>/dev/null | head -1)
-[[ -z "$APP" ]] && APP="$HOME/Library/Developer/Xcode/DerivedData/SimulatorCamera-*/Build/Products/Debug/SimulatorCamera.app"
+APP=$(find /Volumes/nvme/xcode/Debug /tmp -name "SimulatorCameraEx.app" -type d -maxdepth 3 2>/dev/null | head -1)
+[[ -z "$APP" ]] && APP="$HOME/Library/Developer/Xcode/DerivedData/SimulatorCamera-*/Build/Products/Debug/SimulatorCameraEx.app"
 
 echo ""
 echo "▶︎ Verify signature"
@@ -76,12 +76,12 @@ echo "▶︎ Install to /Applications (required for system-extension activation)
 # OSSystemExtensionRequest refuses to activate when the host app lives anywhere
 # but /Applications. Auto-copy here so the dev loop is "build script → click
 # Activate" with no manual drag.
-pkill -f "/Applications/SimulatorCamera.app/Contents/MacOS/SimulatorCamera" 2>/dev/null || true
+pkill -f "/Applications/SimulatorCameraEx.app/Contents/MacOS/SimulatorCameraEx" 2>/dev/null || true
 sleep 0.5
-rm -rf /Applications/SimulatorCamera.app
-cp -R "$APP" /Applications/SimulatorCamera.app
-codesign --verify --verbose=2 /Applications/SimulatorCamera.app 2>&1 | tail -1
-INSTALLED="/Applications/SimulatorCamera.app"
+rm -rf /Applications/SimulatorCameraEx.app
+cp -R "$APP" /Applications/SimulatorCameraEx.app
+codesign --verify --verbose=2 /Applications/SimulatorCameraEx.app 2>&1 | tail -1
+INSTALLED="/Applications/SimulatorCameraEx.app"
 
 echo ""
 echo "✅ Installed: $INSTALLED"

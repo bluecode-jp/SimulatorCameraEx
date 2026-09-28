@@ -46,8 +46,7 @@ targets:
     info:
       path: SimulatorCamera/Info.plist
       properties:
-        # Shown in the menu bar, Dock and window; the bundle stays
-        # SimulatorCamera.app so paths (simcamctl, dylibs, docs) are unchanged.
+        # Shown in the menu bar, Dock and window.
         CFBundleDisplayName: SimulatorCameraEx
         CFBundleName: SimulatorCameraEx
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -59,8 +58,8 @@ targets:
         NSSystemExtensionUsageDescription: SimulatorCamera installs a Camera Extension so the iOS Simulator can capture video without a physical device.
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.SimulatorCamera
-        PRODUCT_NAME: SimulatorCamera
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.SimulatorCameraEx
+        PRODUCT_NAME: SimulatorCameraEx
         # The SimCamInject build phase runs clang + codesign, which need
         # temp/cache writes the user-script sandbox refuses.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
@@ -134,10 +133,10 @@ targets:
         # Reference: Apple's Camera Extension Xcode template TemplateInfo.plist
         # only declares CMIOExtension + NSSystemExtensionUsageDescription.
         CMIOExtension:
-          CMIOExtensionMachServiceName: $(TeamIdentifierPrefix)jp.co.bluecode.SimulatorCamera.Extension
+          CMIOExtensionMachServiceName: $(TeamIdentifierPrefix)jp.co.bluecode.SimulatorCameraEx.Extension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.SimulatorCamera.Extension
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.SimulatorCameraEx.Extension
         # sysextd locates the extension by file name, so the bundle must be
         # named <bundle id>.systemextension (same as Apple's template).
         PRODUCT_NAME: $(PRODUCT_BUNDLE_IDENTIFIER)
@@ -177,7 +176,7 @@ targets:
       - path: Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.SimulatorCamera.Tests
+        PRODUCT_BUNDLE_IDENTIFIER: jp.co.bluecode.SimulatorCameraEx.Tests
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
 

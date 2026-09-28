@@ -33,7 +33,7 @@ private let kColorBarsBGRA: [UInt32] = [
 ]
 private let kBandHeight = 24
 private let kBandStep = 8
-private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera.Extension", category: "provider")
+private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx.Extension", category: "provider")
 
 // Stable UUIDs so System Profiler / AVCaptureDevice see the same device
 // across launches. Generated once with `uuidgen`.

@@ -44,10 +44,10 @@ enum AppControl {
             reply.append(contentsOf: chunk[0..<n])
         }
         guard let end = reply.firstIndex(of: UInt8(ascii: "\n")) else {
-            return ["ok": false, "error": "no reply from SimulatorCamera.app (timed out)"]
+            return ["ok": false, "error": "no reply from SimulatorCameraEx.app (timed out)"]
         }
         return (try? JSONSerialization.jsonObject(with: reply[..<end])) as? [String: Any]
-            ?? ["ok": false, "error": "unreadable reply from SimulatorCamera.app"]
+            ?? ["ok": false, "error": "unreadable reply from SimulatorCameraEx.app"]
     }
 
     /// Print the outcome of a command reply and exit.

@@ -31,7 +31,7 @@ enum SimulatorInjection {
             // <App>.app/Contents/MacOS/simcamctl → <App>.app/Contents/Resources/SimCamInject
             exe.deletingLastPathComponent().deletingLastPathComponent()
                 .appendingPathComponent("Resources/SimCamInject"),
-            URL(fileURLWithPath: "/Applications/SimulatorCamera.app/Contents/Resources/SimCamInject"),
+            URL(fileURLWithPath: "/Applications/SimulatorCameraEx.app/Contents/Resources/SimCamInject"),
         ]
         return candidates.first {
             FileManager.default.fileExists(atPath: $0.appendingPathComponent("SimCamLoader.dylib").path)
@@ -40,7 +40,7 @@ enum SimulatorInjection {
 
     static func loaderPath() -> String {
         guard let dir = injectDirectory() else {
-            fail("SimCamLoader.dylib not found. Install SimulatorCamera.app in /Applications or set SIMCAM_INJECT_DIR.", code: 1)
+            fail("SimCamLoader.dylib not found. Install SimulatorCameraEx.app in /Applications or set SIMCAM_INJECT_DIR.", code: 1)
         }
         return dir.appendingPathComponent("SimCamLoader.dylib").path
     }
@@ -99,7 +99,7 @@ enum SimulatorInjection {
             print("simulator:          \(device)")
             print("injection:          \(enabled ? "enabled (\(inserted!))" : "disabled")")
             if enabled { print("target apps:        \(targets.map { $0.isEmpty ? "all installed apps" : $0 } ?? "all installed apps")") }
-            print("Mac app frame feed: \(feedReachable() ? "reachable on 127.0.0.1:\(kSimCamFeedPort)" : "not reachable — launch SimulatorCamera.app")")
+            print("Mac app frame feed: \(feedReachable() ? "reachable on 127.0.0.1:\(kSimCamFeedPort)" : "not reachable — launch SimulatorCameraEx.app")")
             exit(0)
 
         case "sim-launch":

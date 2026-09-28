@@ -5,9 +5,9 @@
 #                    for a GitHub Release.
 #
 # Produces:
-#   dist/SimulatorCamera-<VERSION>.dmg
-#   dist/SimulatorCamera-<VERSION>.zip
-#   dist/SimulatorCamera-<VERSION>.sha256
+#   dist/SimulatorCameraEx-<VERSION>.dmg
+#   dist/SimulatorCameraEx-<VERSION>.zip
+#   dist/SimulatorCameraEx-<VERSION>.sha256
 #
 # Required env vars:
 #   APPLE_DEVELOPER_ID      "Developer ID Application: Your Name (TEAMID)"
@@ -27,7 +27,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 VERSION="${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo 0.0.0-dev)}"
-APP_NAME="SimulatorCamera"
+APP_NAME="SimulatorCameraEx"
 SCHEME="SimulatorCamera"
 PROJECT="SimulatorCamera.xcodeproj"
 BUILD_DIR="$REPO_ROOT/build"
@@ -104,7 +104,7 @@ fi
 
 echo "▶︎ Verifying signature chain"
 
-EXTENSION_BUNDLE="$APP_BUNDLE/Contents/Library/SystemExtensions/jp.co.bluecode.SimulatorCamera.Extension.systemextension"
+EXTENSION_BUNDLE="$APP_BUNDLE/Contents/Library/SystemExtensions/jp.co.bluecode.SimulatorCameraEx.Extension.systemextension"
 if [[ ! -d "$EXTENSION_BUNDLE" ]]; then
     echo "ERROR: bundled extension not found at $EXTENSION_BUNDLE" >&2
     exit 1
@@ -167,13 +167,13 @@ fi
 # ── Package outputs ─────────────────────────────────────────────────────────
 
 echo "▶︎ Packaging .zip"
-ZIP_OUT="$DIST_DIR/SimulatorCamera-$VERSION.zip"
+ZIP_OUT="$DIST_DIR/SimulatorCameraEx-$VERSION.zip"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$ZIP_OUT"
 
 echo "▶︎ Packaging .dmg"
-DMG_OUT="$DIST_DIR/SimulatorCamera-$VERSION.dmg"
+DMG_OUT="$DIST_DIR/SimulatorCameraEx-$VERSION.dmg"
 hdiutil create \
-    -volname "SimulatorCamera $VERSION" \
+    -volname "SimulatorCameraEx $VERSION" \
     -srcfolder "$APP_BUNDLE" \
     -ov -format UDZO \
     "$DMG_OUT"
@@ -200,9 +200,9 @@ echo "▶︎ Computing checksums"
 (
     cd "$DIST_DIR"
     shasum -a 256 \
-        "SimulatorCamera-$VERSION.zip" \
-        "SimulatorCamera-$VERSION.dmg" \
-        > "SimulatorCamera-$VERSION.sha256"
+        "SimulatorCameraEx-$VERSION.zip" \
+        "SimulatorCameraEx-$VERSION.dmg" \
+        > "SimulatorCameraEx-$VERSION.sha256"
 )
 
 # ── Final verification ──────────────────────────────────────────────────────

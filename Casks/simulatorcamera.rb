@@ -2,7 +2,7 @@ cask "simulatorcamera" do
   version "1.0.0"
   sha256 "REPLACE_WITH_ACTUAL_DMG_SHA256_ON_RELEASE"
 
-  url "https://github.com/dautovri/SimulatorCamera/releases/download/v#{version}/SimulatorCamera-#{version}.dmg",
+  url "https://github.com/dautovri/SimulatorCamera/releases/download/v#{version}/SimulatorCameraEx-#{version}.dmg",
       verified: "github.com/dautovri/SimulatorCamera/"
   name "SimulatorCamera"
   desc "Open-source virtual camera for the iOS Simulator (Camera Extension)"
@@ -16,18 +16,18 @@ cask "simulatorcamera" do
   depends_on macos: ">= :sonoma"
   depends_on arch: :arm64
 
-  app "SimulatorCamera.app"
+  app "SimulatorCameraEx.app"
 
-  binary "#{appdir}/SimulatorCamera.app/Contents/MacOS/simcamctl"
+  binary "#{appdir}/SimulatorCameraEx.app/Contents/MacOS/simcamctl"
 
   uninstall delete: [
-    "/Applications/SimulatorCamera.app",
+    "/Applications/SimulatorCameraEx.app",
   ]
 
   zap trash: [
-    "~/Library/Preferences/jp.co.bluecode.SimulatorCamera.plist",
+    "~/Library/Preferences/jp.co.bluecode.SimulatorCameraEx.plist",
     "~/Library/Application Support/SimulatorCamera",
-    "~/Library/Containers/jp.co.bluecode.SimulatorCamera",
-    "~/Library/Containers/jp.co.bluecode.SimulatorCamera.Extension",
+    "~/Library/Containers/jp.co.bluecode.SimulatorCameraEx",
+    "~/Library/Containers/jp.co.bluecode.SimulatorCameraEx.Extension",
   ]
 end

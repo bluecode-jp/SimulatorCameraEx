@@ -37,8 +37,8 @@ final class ControlServer {
 
     static let shared = ControlServer()
 
-    private let queue = DispatchQueue(label: "jp.co.bluecode.SimulatorCamera.control")
-    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "control")
+    private let queue = DispatchQueue(label: "jp.co.bluecode.SimulatorCameraEx.control")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx", category: "control")
     private var listener: NWListener?
     private weak var sourceManager: SourceManager?
 

@@ -19,7 +19,7 @@ final class BarcodeSource: FrameSource {
 
     private let payload: String
     private let symbology: BarcodeSymbology
-    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "barcode")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx", category: "barcode")
     private var task: Task<Void, Never>?
 
     init(payload: String, symbology: BarcodeSymbology) {

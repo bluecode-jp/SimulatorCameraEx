@@ -58,7 +58,7 @@ final class SourceManager {
     private var activeSource: FrameSource?
     private var switchGeneration = 0
     private let link: CameraLink
-    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "source-manager")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx", category: "source-manager")
 
     init(link: CameraLink) {
         self.link = link

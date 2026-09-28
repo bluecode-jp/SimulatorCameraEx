@@ -3,7 +3,7 @@
 # build.sh — build the iOS Simulator injection dylibs.
 #
 # Produces (in $1, default build/inject; the Xcode build puts them in
-# SimulatorCamera.app/Contents/Resources/SimCamInject):
+# SimulatorCameraEx.app/Contents/Resources/SimCamInject):
 #   SimCamLoader.dylib   DYLD_INSERT_LIBRARIES entry point (libSystem only)
 #   SimCamInject.dylib   AVFoundation hooks + frame source + web page camera
 #

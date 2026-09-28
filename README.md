@@ -56,7 +56,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 
 ```
 ┌──────────────── Mac ────────────────────────────────────────────┐
-│ SimulatorCameraEx.app（/Applications/SimulatorCamera.app）      │
+│ /Applications/SimulatorCameraEx.app                              │
 │   映像ソース（カメラ / QR / Code128 / EAN-13 / 画像 / 動画）    │
 │      ├─▶ SimulatorFeed   127.0.0.1:47847  フレーム＋バーコード   │
 │      │                   検出結果（Vision）を配信               │
@@ -100,7 +100,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 
 配布用 DMG を受け取った人は、[INSTALL.md](INSTALL.md) の手順に沿って入れてください（DMG は準備中です。下の「開発者向け情報」を参照）。
 
-1. DMG を開き、`SimulatorCamera.app` を **/Applications** にコピーする
+1. DMG を開き、`SimulatorCameraEx.app` を **/Applications** にコピーする
 2. アプリを起動する
 
 ### B. ソースからビルドする
@@ -121,9 +121,9 @@ xcodebuild -project SimulatorCamera.xcodeproj -scheme SimulatorCamera \
 できたアプリを `/Applications` にコピーして起動します。
 
 ```bash
-rm -rf /Applications/SimulatorCamera.app
-ditto build/dd/Build/Products/Debug/SimulatorCamera.app /Applications/SimulatorCamera.app
-open /Applications/SimulatorCamera.app
+rm -rf /Applications/SimulatorCameraEx.app
+ditto build/dd/Build/Products/Debug/SimulatorCameraEx.app /Applications/SimulatorCameraEx.app
+open /Applications/SimulatorCameraEx.app
 ```
 
 ### 初回の設定
@@ -178,11 +178,11 @@ EAN-13 の入力ルールは次のとおりです。
 `simcamctl` はアプリの中にあります。PATH は通していないので、フルパスで実行します。
 
 ```bash
-SIMCAMCTL=/Applications/SimulatorCamera.app/Contents/MacOS/simcamctl
+SIMCAMCTL=/Applications/SimulatorCameraEx.app/Contents/MacOS/simcamctl
 $SIMCAMCTL help
 ```
 
-PATH を通したい場合は、`ln -sf /Applications/SimulatorCamera.app/Contents/MacOS/simcamctl ~/.local/bin/simcamctl` を実行します（`~/.local/bin` が PATH に入っている場合。詳しくは [INSTALL.md](INSTALL.md) を参照）。
+PATH を通したい場合は、`ln -sf /Applications/SimulatorCameraEx.app/Contents/MacOS/simcamctl ~/.local/bin/simcamctl` を実行します（`~/.local/bin` が PATH に入っている場合。詳しくは [INSTALL.md](INSTALL.md) を参照）。
 
 ### 映像ソースを切り替える
 

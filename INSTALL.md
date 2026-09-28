@@ -12,12 +12,12 @@ iOS シミュレータと Android エミュレータのアプリにカメラ映�
 
 ## インストール
 
-1. `SimulatorCamera-<version>.dmg` を開き、`SimulatorCamera.app` を **/Applications** にコピーします。
-2. `/Applications/SimulatorCamera.app` を起動します。
-3. （任意）`simcamctl` はアプリの中（`/Applications/SimulatorCamera.app/Contents/MacOS/simcamctl`）にあります。`simcamctl` だけで実行できるようにするには、PATH の通った場所にリンクを作ります（`~/.local/bin` が PATH に入っている場合。sudo 不要）。
+1. `SimulatorCameraEx-<version>.dmg` を開き、`SimulatorCameraEx.app` を **/Applications** にコピーします。
+2. `/Applications/SimulatorCameraEx.app` を起動します。
+3. （任意）`simcamctl` はアプリの中（`/Applications/SimulatorCameraEx.app/Contents/MacOS/simcamctl`）にあります。`simcamctl` だけで実行できるようにするには、PATH の通った場所にリンクを作ります（`~/.local/bin` が PATH に入っている場合。sudo 不要）。
    ```bash
    mkdir -p ~/.local/bin
-   ln -sf /Applications/SimulatorCamera.app/Contents/MacOS/simcamctl ~/.local/bin/simcamctl
+   ln -sf /Applications/SimulatorCameraEx.app/Contents/MacOS/simcamctl ~/.local/bin/simcamctl
    ```
    リンクなので、アプリを更新すれば `simcamctl` も新しくなります。以下の例は、このリンクを作った前提で `simcamctl` と書いています（作らない場合はフルパスで実行してください）。
 
@@ -133,4 +133,4 @@ Mac の仮想カメラ「SimulatorCamera Virtual」は、Android エミュレー
 1. 仮想カメラを有効にしていた場合は、SimulatorCamera アプリで **Deactivate** をクリックします。
 2. シミュレータで有効化していた場合は `simcamctl sim-disable` を実行します（またはシミュレータを再起動）。
 3. `android-setup` を実行した AVD は、Android Studio の Device Manager でカメラの設定を元に戻します。
-4. `/Applications/SimulatorCamera.app` と、作成した場合は `~/.local/bin/simcamctl` を削除します。
+4. `/Applications/SimulatorCameraEx.app` と、作成した場合は `~/.local/bin/simcamctl` を削除します。

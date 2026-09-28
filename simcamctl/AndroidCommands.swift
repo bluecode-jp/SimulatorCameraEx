@@ -8,7 +8,7 @@
 //    android-launch AVD [--front] start an AVD with the virtual camera
 //    android-setup AVD            make it the AVD's default back camera
 //
-//  Frames come from whatever SimulatorCamera.app (or set-source) is showing.
+//  Frames come from whatever SimulatorCameraEx.app (or set-source) is showing.
 //
 
 import Foundation

@@ -14,7 +14,7 @@ SimulatorCameraEx を、外部のツール（AI エージェント、テスト�
 
 | 作業 | 必要な場面 | 確認コマンド |
 |---|---|---|
-| `/Applications/SimulatorCamera.app` を入れる | 常に | `test -x /Applications/SimulatorCamera.app/Contents/MacOS/simcamctl` |
+| `/Applications/SimulatorCameraEx.app` を入れる | 常に | `test -x /Applications/SimulatorCameraEx.app/Contents/MacOS/simcamctl` |
 | アプリで **Activate** を押し、「システム設定 → 一般 → ログイン項目と機能拡張」でカメラ拡張を許可 | Android エミュレータを使う場合（iOS だけなら不要） | `simcamctl ping` の終了コードが 0 |
 | Xcode と iOS シミュレータ | iOS | `xcrun simctl list devices available` |
 | Android Studio（Android SDK・Emulator）と AVD の作成 | Android | `simcamctl android-list` に AVD が出る |
@@ -22,7 +22,7 @@ SimulatorCameraEx を、外部のツール（AI エージェント、テスト�
 以下では、次の変数を使います。
 
 ```bash
-SIMCAMCTL=/Applications/SimulatorCamera.app/Contents/MacOS/simcamctl
+SIMCAMCTL=/Applications/SimulatorCameraEx.app/Contents/MacOS/simcamctl
 ADB="$HOME/Library/Android/sdk/platform-tools/adb"
 ```
 
@@ -30,7 +30,7 @@ ADB="$HOME/Library/Android/sdk/platform-tools/adb"
 
 ## 1. 基本ルール
 
-1. **Mac アプリ（SimulatorCamera.app）を起動しておく。** 映像を作っているのはアプリです。アプリが止まっていると、iOS シミュレータには映像が届きません。
+1. **Mac アプリ（SimulatorCameraEx.app）を起動しておく。** 映像を作っているのはアプリです。アプリが止まっていると、iOS シミュレータには映像が届きません。
 2. **映像は `simcamctl set-source` で切り替える。** 戻ってきた時点で、新しい映像が流れ始めています。
 3. **切り替えたあと、アプリが読み取るまで 1 秒ほど待つ。** 映像は毎秒 30 コマで届きます。iOS のバーコード検出は 0.1 秒ごとです。
 4. **同じバーコードを続けて読ませるときは、間にテストパターンを挟む。** 多くのアプリは、同じ値が続けて見えると読み取りを1回にまとめます。
@@ -42,7 +42,7 @@ ADB="$HOME/Library/Android/sdk/platform-tools/adb"
 ### アプリの起動と準備完了の確認
 
 ```bash
-open -g /Applications/SimulatorCamera.app          # -g: 前面に出さずに起動
+open -g /Applications/SimulatorCameraEx.app          # -g: 前面に出さずに起動
 for i in $(seq 1 30); do
   printf '{"command":"status"}\n' | nc -w 2 127.0.0.1 47848 | grep -q '"ok":true' && break
   sleep 1
@@ -68,7 +68,7 @@ done
 
 | コマンド | 成功時の出力（例） | 補足 |
 |---|---|---|
-| `set-source --code128 "TEXT"` | `source: Code 128 (via SimulatorCamera.app; 1 simulator app(s) connected)` | ASCII の印字可能文字のみ |
+| `set-source --code128 "TEXT"` | `source: Code 128 (via SimulatorCameraEx.app; 1 simulator app(s) connected)` | ASCII の印字可能文字のみ |
 | `set-source --ean DIGITS` | `source: EAN-13 (via …)` | 1〜12桁：先頭を0で埋め、チェックデジットを付ける（`123` → `0000000001236`）。13桁：チェックデジットが違うとエラー |
 | `set-source --qr "TEXT"` | `source: QR code (via …)` | |
 | `set-source --image PATH` | `source: static image (via …)` | PNG / JPG。相対パス可 |
@@ -87,7 +87,7 @@ done
 
 | コマンド | 内容 |
 |---|---|
-| `status` | 1行目が `app source: …` ならアプリは起動中、`app: SimulatorCamera.app not running` なら停止中。続けてカメラ拡張の状態を出す。**カメラ拡張が有効でないと、アプリが起動していても終了コード 2** になるので、iOS だけで使う場合は JSON の `status`（3章）で確認する |
+| `status` | 1行目が `app source: …` ならアプリは起動中、`app: SimulatorCameraEx.app not running` なら停止中。続けてカメラ拡張の状態を出す。**カメラ拡張が有効でないと、アプリが起動していても終了コード 2** になるので、iOS だけで使う場合は JSON の `status`（3章）で確認する |
 | `ping` | 仮想カメラに届けば終了コード 0 |
 | `sim-status [--device UDID]` | iOS シミュレータへの注入が有効か |
 | `android-list` | `virtual camera: webcam3` のように、Android エミュレータから見た仮想カメラの番号と AVD の一覧 |
@@ -131,7 +131,7 @@ iOS シミュレータへの注入（`sim-*`）と Android（`android-*`）は�
 アプリが起動していれば、起動したシミュレータには注入が自動で有効になります。そのあとに起動したアプリでは、カメラが SimulatorCameraEx の映像になります。
 
 ```bash
-open -g /Applications/SimulatorCamera.app            # 1. アプリを起動（「1. 基本ルール」の待ち方も参照）
+open -g /Applications/SimulatorCameraEx.app            # 1. アプリを起動（「1. 基本ルール」の待ち方も参照）
 xcrun simctl boot <UDID>                             # 2. シミュレータを起動（起動済みなら不要）
 $SIMCAMCTL sim-status --device <UDID>                # 3. "injection: enabled" を確認（数秒かかることがある）
 $SIMCAMCTL set-source --code128 "4570000011"         # 4. 読ませたい映像を選ぶ
@@ -174,7 +174,7 @@ xcrun simctl openurl <UDID> "https://example.com/scan"  # テストするペー�
 Android エミュレータは、Mac の仮想カメラ「SimulatorCamera Virtual」を背面カメラとして使います。Android 側への注入はありません。バーコードは、テストするアプリ自身（ML Kit、ZXing など）が映像から読み取ります。
 
 ```bash
-open -g /Applications/SimulatorCamera.app                        # 1. アプリを起動
+open -g /Applications/SimulatorCameraEx.app                        # 1. アプリを起動
 $SIMCAMCTL android-launch <AVD名>                                 # 2. 仮想カメラを背面カメラにして起動
 SERIAL=emulator-5554                                             #    ポートを変えていなければこの名前（`$ADB devices` で確認）
 $ADB -s $SERIAL wait-for-device

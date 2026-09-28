@@ -41,7 +41,7 @@ final class CameraLink {
     private(set) var framesRejected: Int = 0
 
     private let client = CMIOSinkClient()
-    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "camera-link")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx", category: "camera-link")
     private var retryTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
     private var retryAttempt = 0

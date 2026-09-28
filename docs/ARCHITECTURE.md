@@ -10,7 +10,7 @@ There is **no iOS SDK and no Swift Package.** Your app links nothing.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  SimulatorCamera.app  (container, macOS 14+)                 │
+│  SimulatorCameraEx.app  (container, macOS 14+)                 │
 │                                                              │
 │   MainView / SourceManager      ← SwiftUI source picker      │
 │   ExtensionController           ← OSSystemExtensionRequest    │
@@ -53,7 +53,7 @@ the source selection without the GUI.
 
 | Process | Role | Lifetime |
 | --- | --- | --- |
-| `SimulatorCamera.app` | UI, frame production, activation requests | User-controlled |
+| `SimulatorCameraEx.app` | UI, frame production, activation requests | User-controlled |
 | `SimulatorCameraExtension` | Virtual camera device + stream | Managed by `systemextensionsd` |
 | `simcamctl` | Scripted control | Per-invocation |
 

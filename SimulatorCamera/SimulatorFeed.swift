@@ -29,8 +29,8 @@ final class SimulatorFeed: @unchecked Sendable {
 
     static let shared = SimulatorFeed()
 
-    private let queue = DispatchQueue(label: "jp.co.bluecode.SimulatorCamera.feed")
-    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCamera", category: "simulator-feed")
+    private let queue = DispatchQueue(label: "jp.co.bluecode.SimulatorCameraEx.feed")
+    private let log = Logger(subsystem: "jp.co.bluecode.SimulatorCameraEx", category: "simulator-feed")
     private var listener: NWListener?
     private var clients: [ObjectIdentifier: Client] = [:]
     private var latest: Data?
@@ -38,7 +38,7 @@ final class SimulatorFeed: @unchecked Sendable {
 
     // Barcode detection runs off the frame path, at most every 100 ms; each
     // frame carries the newest result so the simulator side needs no Vision.
-    private let detectQueue = DispatchQueue(label: "jp.co.bluecode.SimulatorCamera.feed.detect", qos: .utility)
+    private let detectQueue = DispatchQueue(label: "jp.co.bluecode.SimulatorCameraEx.feed.detect", qos: .utility)
     private let metaLock = NSLock()
     private var latestMeta = Data("[]".utf8)
     private var detecting = false
