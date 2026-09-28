@@ -7,6 +7,21 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### SimulatorCameraEx の配布対応
+- **アプリ名とバンドル ID を SimulatorCameraEx に変更。** `SimulatorCameraEx.app`、
+  `jp.co.bluecode.SimulatorCameraEx`（拡張は `….SimulatorCameraEx.Extension`、App Group は
+  `C5TUJ8526Z.jp.co.bluecode.SimulatorCameraEx`）。元の SimulatorCamera と同じ Mac に入れても
+  ぶつかりません。旧 ID の拡張は別物として残るので、旧アプリで Deactivate してから削除します。
+- **初めて拡張を有効化したあと、映像が届かなかった不具合を修正。** アプリ内のカメラ一覧が
+  有効化前のまま更新されず、アプリを手動で再起動するまで仮想カメラにつながりませんでした。
+  有効化の完了後3秒たっても仮想カメラが見えなければ、アプリが自動で再起動します。
+- **Developer ID で配布できるアーカイブに修正。** `simcamctl` がアーカイブの
+  `/usr/local/bin` にも入っていたため、Xcode がアプリのアーカイブと認識せず、配布方法を
+  選べませんでした（`simcamctl` はアプリ内の `Contents/MacOS` にだけ入れます）。
+- **リリース手順を追加。** `scripts/archive-release.sh`（アーカイブを作り Organizer で開く）と
+  `scripts/package-dmg.sh`（公証済みのアプリから DMG・ZIP を作る）。署名と公証は Organizer の
+  Direct Distribution で、クラウド管理の Developer ID 証明書を使います。手順は RELEASING.md。
+
 ### Changed
 - **Frame transport rewritten on CoreMediaIO sink streams.** The v1.0.0 design
   pushed frames into the camera extension over a private `NSXPCListener`.

@@ -6,13 +6,15 @@ iOS シミュレータと Android エミュレータのアプリにカメラ映�
 
 ## 動作環境
 
-- macOS 14 以降
+- macOS 14 以降（Apple silicon・Intel のどちらでも動きます）
 - Xcode 16 以降（iOS シミュレータを使う場合）
 - Android Studio（Android SDK・Emulator）と AVD（Android エミュレータを使う場合）
 
 ## インストール
 
 1. `SimulatorCameraEx-<version>.dmg` を開き、`SimulatorCameraEx.app` を **/Applications** にコピーします。
+   - アプリは BLUECODE,INC. の Developer ID で署名し、Apple の公証を受けています。ダウンロードしたものでも、警告なしで開けます。
+   - カメラ拡張は /Applications にあるアプリからしか有効にできません。必ず /Applications にコピーしてください。
 2. `/Applications/SimulatorCameraEx.app` を起動します。
 3. （任意）`simcamctl` はアプリの中（`/Applications/SimulatorCameraEx.app/Contents/MacOS/simcamctl`）にあります。`simcamctl` だけで実行できるようにするには、PATH の通った場所にリンクを作ります（`~/.local/bin` が PATH に入っている場合。sudo 不要）。
    ```bash
@@ -23,11 +25,11 @@ iOS シミュレータと Android エミュレータのアプリにカメラ映�
 
 ## iOS シミュレータで使う
 
-iOS シミュレータにはカメラの仕組みがないため、SimulatorCamera は起動するアプリに小さなライブラリ（SimCamInject）を読み込ませ、そこからカメラ映像を渡します。アプリ本体のファイルは変更しません。影響するのは有効にしたシミュレータの中だけで、Mac 本体には影響しません。
+iOS シミュレータにはカメラの仕組みがないため、SimulatorCameraEx は起動するアプリに小さなライブラリ（SimCamInject）を読み込ませ、そこからカメラ映像を渡します。アプリ本体のファイルは変更しません。影響するのは有効にしたシミュレータの中だけで、Mac 本体には影響しません。
 
 ### 有効化
 
-**SimulatorCamera アプリを起動しておけば、操作は不要です。** 起動済みのシミュレータと、あとから起動したシミュレータに、自動で有効になります（アプリの「iOS Simulator」欄の最初のスイッチでオン・オフできます）。
+**SimulatorCameraEx アプリを起動しておけば、操作は不要です。** 起動済みのシミュレータと、あとから起動したシミュレータに、自動で有効になります（アプリの「iOS Simulator」欄の最初のスイッチでオン・オフできます）。
 
 - 有効になったあとに起動したアプリから、カメラが使えます。すでに起動しているアプリは、一度終了してから起動し直してください。Expo CLI の `i` キーやホーム画面からの起動でも有効です。
 - 「iOS Simulator」欄の **Device** で機種を選んで **Launch** を押すと、そのシミュレータを起動して画面を開けます。
@@ -44,7 +46,7 @@ simcamctl sim-enable --app host.exp.Exponent      # 対象を絞る場合（--ap
 
 ### 使い方
 
-1. Mac の SimulatorCamera アプリで映像ソースを選びます。
+1. Mac の SimulatorCameraEx アプリで映像ソースを選びます。
    - **QR Code**：文字を入力して **Generate**
    - **Code 128**：文字（英数字・記号）を入力して **Generate**
    - **EAN-13**：数字を入力して **Generate**。1〜12桁は先頭を0で埋めてチェックデジットを自動で付けます（例：`123456789` → `0001234567895`）。13桁はチェックデジットが正しいか確認します。
@@ -58,7 +60,7 @@ simcamctl sim-enable --app host.exp.Exponent      # 対象を絞る場合（--ap
 
 ### コマンドで映像を切り替える（自動テスト・CI 向け）
 
-SimulatorCamera アプリを起動した状態で実行します。アプリの画面で選んだときと同じく、シミュレータ内のアプリと Mac の仮想カメラの両方に届き、アプリの表示も切り替わります。
+SimulatorCameraEx アプリを起動した状態で実行します。アプリの画面で選んだときと同じく、シミュレータ内のアプリと Mac の仮想カメラの両方に届き、アプリの表示も切り替わります。
 
 ```bash
 simcamctl set-source --qr "https://example.com"          # QR コード
@@ -108,7 +110,7 @@ simcamctl sim-launch host.exp.Exponent --url exp://127.0.0.1:8081
 Android エミュレータは、Mac の仮想カメラ「SimulatorCamera Virtual」を背面カメラとして使います（エミュレータ標準の VirtualScene の代わり）。
 
 1. 仮想カメラを有効にします（下の「Mac の仮想カメラを有効にする」。Mac ごとに初回のみ）。
-2. エミュレータを **SimulatorCamera から起動します**。
+2. エミュレータを **SimulatorCameraEx から起動します**。
    - アプリの「Android Emulator」欄で AVD を選んで **Launch**（前面カメラも同じ映像にするなら **Front camera too** をオン）
    - またはコマンドで起動します。
      ```bash
@@ -125,12 +127,18 @@ Android エミュレータは、Mac の仮想カメラ「SimulatorCamera Virtual
 
 Mac の仮想カメラ「SimulatorCamera Virtual」は、Android エミュレータと、Zoom などの Mac アプリで使います（iOS シミュレータには不要です）。
 
-1. SimulatorCamera アプリで **Activate** をクリックします。
+1. SimulatorCameraEx アプリで **Activate** をクリックします。
 2. 「システム設定 → 一般 → ログイン項目と機能拡張」でカメラ拡張を許可します（Mac ごとに初回のみ）。
+3. 許可したあと、アプリが自動で一度再起動することがあります（仮想カメラにつなぎ直すためです）。
+   - 再起動しなかった場合や、`simcamctl status` の `sink open` が `no` のままの場合は、アプリを終了して起動し直してください。
+
+拡張に変更がある新しい版に置き換えたときは、アプリの起動時に拡張も自動で入れ替わります（入れ替わったあと、アプリは自動で再起動します）。
 
 ## アンインストール
 
-1. 仮想カメラを有効にしていた場合は、SimulatorCamera アプリで **Deactivate** をクリックします。
+1. 仮想カメラを有効にしていた場合は、SimulatorCameraEx アプリで **Deactivate** をクリックします。
 2. シミュレータで有効化していた場合は `simcamctl sim-disable` を実行します（またはシミュレータを再起動）。
 3. `android-setup` を実行した AVD は、Android Studio の Device Manager でカメラの設定を元に戻します。
 4. `/Applications/SimulatorCameraEx.app` と、作成した場合は `~/.local/bin/simcamctl` を削除します。
+   - 手順1をせずにアプリを Finder でゴミ箱に入れた場合も、macOS がカメラ拡張を自動で削除します（完全に消えるのは Mac の再起動後です）。
+   - アプリを置き換えるだけのとき（更新）は、Deactivate は不要です。ただし古いアプリを Finder でゴミ箱に入れると拡張も消えるので、新しいアプリで **Activate** をやり直してください。

@@ -84,7 +84,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 
 ## 動作環境
 
-- macOS 14 以降（macOS 27.0 で確認）
+- macOS 14 以降（macOS 27.0 で確認）。配布版は Apple silicon・Intel の両方に対応
 - Xcode 16 以降（Xcode 27.0 で確認）
   - Xcode 27 ではシミュレータの画面が Device Hub に変わっています（`Xcode.app/Contents/Applications/DeviceHub.app`）。
 - iOS シミュレータ：iOS 18.5（iPhone 16 Pro）と Expo Go 57.0.9 で確認済み
@@ -98,10 +98,12 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 
 ### A. 配布用 DMG から入れる
 
-配布用 DMG を受け取った人は、[INSTALL.md](INSTALL.md) の手順に沿って入れてください（DMG は準備中です。下の「開発者向け情報」を参照）。
+配布用 DMG（`SimulatorCameraEx-<version>.dmg`）を受け取った人は、[INSTALL.md](INSTALL.md) の手順に沿って入れてください。
 
 1. DMG を開き、`SimulatorCameraEx.app` を **/Applications** にコピーする
 2. アプリを起動する
+
+アプリは BLUECODE,INC. の Developer ID で署名し、Apple の公証を受けています。ダウンロードしたものでも、警告なしで開けます。
 
 ### B. ソースからビルドする
 
@@ -324,7 +326,9 @@ $SIMCAMCTL android-setup Medium_Phone_API_36.0   # AVD の config.ini の hw.cam
 | `docs/AUTOMATION.md` | 自動テスト・AI エージェント向けの操作手順 |
 | `Tests/` | ユニットテスト |
 | `scripts/make-icon.swift` | アプリアイコンを描いて生成する |
-| `scripts/build-release.sh` | 配布用 DMG を作る（Developer ID で署名し、公証する） |
+| `scripts/archive-release.sh` | 配布用の Release アーカイブを作り、Xcode の Organizer で開く |
+| `scripts/package-dmg.sh` | 公証済みのアプリから配布用 DMG・ZIP を作る |
+| `scripts/build-release.sh` | 手元に Developer ID 証明書がある場合に、署名・公証・DMG 作成をまとめて行う |
 
 Xcode プロジェクトは `project.yml` から XcodeGen で作ります。`.xcodeproj` は直接編集しないでください。
 
@@ -345,17 +349,13 @@ xcodebuild -project SimulatorCamera.xcodeproj -scheme SimulatorCamera \
   - ビルド番号が変わると、アプリの起動時に拡張が自動で入れ替わります。入れ替わったあと、アプリは自動で再起動します。
   - ビルド番号を上げないと、古い拡張が使われ続けます。
 
-### 配布用 DMG（準備中）
-DMG の作成に必要なものは次の2つです。
-- Developer ID Application 証明書
-- 公証用の認証情報（`xcrun notarytool store-credentials SimCamNotary …`）
-
-どちらも揃ったら、次のように実行します。
+### 配布用 DMG
+Xcode の Organizer で、クラウド管理の Developer ID 証明書を使って署名・公証します（手元に Developer ID 証明書は要りません）。手順の詳細は [RELEASING.md](RELEASING.md) を参照してください。
 
 ```bash
-KEYCHAIN_PROFILE=SimCamNotary APPLE_TEAM_ID=C5TUJ8526Z \
-APPLE_DEVELOPER_ID="Developer ID Application: BLUECODE,INC. (C5TUJ8526Z)" \
-VERSION=1.0.0 ./scripts/build-release.sh
+./scripts/archive-release.sh   # アーカイブを作り、Organizer で開く
+# Organizer で Distribute App → Direct Distribution（署名と公証）
+./scripts/package-dmg.sh       # 公証済みのアプリから dist/ に DMG・ZIP を作る
 ```
 
 ### CI
