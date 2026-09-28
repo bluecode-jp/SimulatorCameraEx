@@ -7,7 +7,19 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### SimulatorCameraEx の配布対応
+## SimulatorCameraEx 1.0.1 — 2026-09-28
+
+### 追加・変更
+- **QR Code・Code 128・EAN-13 に Preview ボタンを追加。** 別ウインドウに、iOS シミュレータの
+  アプリに届くのと同じ絵（今の向きの設定。縦なら 720×1280）を表示します。入力欄を変えると
+  すぐ描き直すので、送る前に確認できます。
+- **Generate ボタンを Inject に改名。** 押したときの動作（映像ソースの切り替え）は同じです。
+
+## SimulatorCameraEx 1.0.0 — 2026-09-28
+
+最初の配布版です。下の「元の SimulatorCamera で未リリースだった変更」もすべて含みます。
+
+### 配布対応
 - **アプリ名とバンドル ID を SimulatorCameraEx に変更。** `SimulatorCameraEx.app`、
   `jp.co.bluecode.SimulatorCameraEx`（拡張は `….SimulatorCameraEx.Extension`、App Group は
   `C5TUJ8526Z.jp.co.bluecode.SimulatorCameraEx`）。元の SimulatorCamera と同じ Mac に入れても
@@ -24,6 +36,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Homebrew で配布。** `brew install --cask bluecode-jp/tap/simulatorcameraex`。Cask と DMG は
   公開リポジトリ `bluecode-jp/homebrew-tap` に置きます（本体リポジトリは非公開のため）。元の
   SimulatorCamera 向けだった `Casks/simulatorcamera.rb` は削除しました。
+
+## 元の SimulatorCamera で未リリースだった変更（SimulatorCameraEx 1.0.0 に含む）
 
 ### Changed
 - **Frame transport rewritten on CoreMediaIO sink streams.** The v1.0.0 design
