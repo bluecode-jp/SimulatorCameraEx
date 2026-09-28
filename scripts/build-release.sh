@@ -42,6 +42,9 @@ if [[ ! -d "$PROJECT" ]]; then
     exit 1
 fi
 
+# ビルド番号が過去のリリースより大きいこと（同じだと配布先で拡張が入れ替わらない）
+"$REPO_ROOT/scripts/check-build-number.sh"
+
 # Regenerate from project.yml in case anything changed.
 if command -v xcodegen >/dev/null 2>&1; then
     echo "▶︎ xcodegen generate"
@@ -66,7 +69,6 @@ xcodebuild \
     -archivePath "$ARCHIVE_PATH" \
     -allowProvisioningUpdates \
     MARKETING_VERSION="$VERSION" \
-    CURRENT_PROJECT_VERSION="$VERSION" \
     DEVELOPMENT_TEAM="${APPLE_TEAM_ID:-}" \
     archive 2>&1 | (xcpretty --simple || cat)
 

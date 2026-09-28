@@ -19,9 +19,11 @@ Mac アプリ（カメラ拡張・`simcamctl`・SimCamInject 同梱）を、Deve
 ## 1. バージョンを決める
 
 - `project.yml` の `MARKETING_VERSION`（表示用のバージョン、例 `1.0.0`）を更新します。
-- **カメラ拡張（`SimulatorCameraExtension/` や `Shared/` の拡張が使うコード）を変えたときは、`CURRENT_PROJECT_VERSION`（ビルド番号）も1つ上げます。**
-  - ビルド番号が同じだと、配布先の Mac で古い拡張が使われ続けます。
+- **リリースのたびに、`CURRENT_PROJECT_VERSION`（ビルド番号）を必ず1つ上げます。** 拡張のコードを変えていなくても上げます。
+  - 拡張の表示用バージョンも `MARKETING_VERSION` から作られるので、バージョンを上げると拡張の中身も変わります。
+  - ビルド番号が同じだと、配布先の Mac で古い拡張が使われ続けます。さらにアプリが「同梱の拡張が入っている」と判断するため、Deactivate が `OSSystemExtensionErrorDomain error 4` で失敗します（1.0.1 をビルド番号 6 のまま出して起きました）。
   - 上げておくと、アプリの起動時に拡張が入れ替わり、アプリが自動で再起動します。
+  - 上げ忘れると、手順2のスクリプトが止まります（`scripts/check-build-number.sh` が、リリースタグ時点のビルド番号と比べます）。
 - `CHANGELOG.md` の `[Unreleased]` を `[X.Y.Z] — YYYY-MM-DD` に移します。
 
 ## 2. アーカイブを作る
@@ -104,6 +106,7 @@ git push origin main vX.Y.Z
 
 ## うまくいかないとき
 
+- **`ERROR: ビルド番号 N が、リリース済みの vX.Y.Z（ビルド番号 M）より大きくありません`**：`project.yml` の `CURRENT_PROJECT_VERSION` を上げてください（手順1）。配布しない確認用のビルドだけは、`SKIP_BUILD_NUMBER_CHECK=1` を付けるとチェックを飛ばせます。
 - **Organizer に配布方法が出ない／`exportOptionsPlist error for key "method"`**：アーカイブが macOS App Archive になっていません（手順2を参照）。
 - **`No certificate for team 'C5TUJ8526Z' matching 'Developer ID Application'`**：`xcodebuild -exportArchive` をコマンドラインで実行すると、クラウド証明書が使えずにこのエラーになります。Organizer から配布してください。
 - **公証が失敗した**：`notarization-log.json` の `issues` に原因が書かれています。

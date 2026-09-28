@@ -11,6 +11,12 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **リポジトリを公開しました。** 配布ファイル（DMG・ZIP）は、このリポジトリの Releases（`vX.Y.Z`）に
   置きます。tap `bluecode-jp/homebrew-tap` には Cask だけを置き、Cask のダウンロード元もこちらに
   変えました（インストールのコマンドは変わりません）。
+- **リリースのたびにビルド番号を上げるようにしました。** 1.0.1 はビルド番号 6 のまま出したため、
+  1.0.0 から更新した Mac では拡張が入れ替わらず、Deactivate が `OSSystemExtensionErrorDomain error 4`
+  で失敗しました（Activate を押すと直ります）。リリース用のスクリプトは、ビルド番号が過去の
+  リリースより大きくないと止まります。
+- **`build-release.sh` がビルド番号をバージョン文字列で上書きしないようにしました。** `project.yml` の
+  `CURRENT_PROJECT_VERSION` をそのまま使います。
 
 ## SimulatorCameraEx 1.0.1 — 2026-09-28
 

@@ -22,6 +22,9 @@ WORK_DIR="$REPO_ROOT/build/release"
 ARCHIVES_DIR="$HOME/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)"
 ARCHIVE_PATH="$ARCHIVES_DIR/SimulatorCameraEx $VERSION ($BUILD) $(date +%H.%M.%S).xcarchive"
 
+# ビルド番号が過去のリリースより大きいこと（同じだと配布先で拡張が入れ替わらない）
+"$REPO_ROOT/scripts/check-build-number.sh"
+
 if command -v xcodegen >/dev/null 2>&1; then
     echo "▶︎ xcodegen generate"
     xcodegen generate

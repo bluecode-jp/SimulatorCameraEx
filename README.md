@@ -363,6 +363,7 @@ xcodebuild -project SimulatorCamera.xcodeproj -scheme SimulatorCamera \
 
 ### カメラ拡張を変更したとき
 - `project.yml` の `CURRENT_PROJECT_VERSION` を1つ上げてください。
+  - リリースのときは、拡張を変えていなくても必ず上げます（[RELEASING.md](RELEASING.md) の手順1）。
   - ビルド番号が変わると、アプリの起動時に拡張が自動で入れ替わります。入れ替わったあと、アプリは自動で再起動します。
   - ビルド番号を上げないと、古い拡張が使われ続けます。
 
