@@ -42,13 +42,14 @@ final class ExtensionController: NSObject {
     /// Set when an activation replaced an older extension build.
     private var didReplaceExtension = false
 
-    /// CoreMediaIO keeps this process's device list from before the swap,
-    /// so the new extension's camera never shows up here ("not registered")
-    /// until the app restarts. Relaunch once, right after the replacement.
-    private func relaunchAfterReplacement() {
+    /// CoreMediaIO keeps this process's device list from before the
+    /// activation, so a camera registered afterwards (first install, or a
+    /// replaced build) never shows up here ("not registered") until the app
+    /// restarts. Relaunch once, right after the activation completes.
+    private func relaunchToPickUpCamera() {
         didReplaceExtension = false
-        lastMessage = "Extension updated — restarting SimulatorCameraEx to connect to it…"
-        log.info("extension replaced; relaunching to pick up the new camera device")
+        lastMessage = "Extension activated — restarting SimulatorCameraEx to connect to it…"
+        log.info("extension activated; relaunching to pick up the new camera device")
         // Quit first, then reopen from a detached shell: a second instance
         // started while this one runs could not bind the loopback ports.
         let path = Bundle.main.bundlePath
@@ -58,10 +59,24 @@ final class ExtensionController: NSObject {
         do {
             try relauncher.run()
         } catch {
-            lastMessage = "Extension updated. Quit and reopen SimulatorCameraEx to connect."
+            lastMessage = "Extension activated. Quit and reopen SimulatorCameraEx to connect."
             return
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { NSApp.terminate(nil) }
+    }
+
+    /// After a first install the camera may still be registering when the
+    /// request completes: give this process a few seconds to see it, and
+    /// relaunch only if it never does.
+    private func relaunchIfCameraMissing() async {
+        for _ in 0..<6 {
+            if CMIOSinkClient.findDevice(named: kSimCamDeviceName) != nil {
+                log.info("virtual camera visible after activation; no relaunch needed")
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        relaunchToPickUpCamera()
     }
 
     /// CFBundleVersion of the extension embedded in this app.
@@ -194,7 +209,12 @@ extension ExtensionController: OSSystemExtensionRequestDelegate {
                 } else {
                     self.state = .active
                     self.lastMessage = "Extension active. The virtual camera is now available in AVFoundation."
-                    if self.didReplaceExtension { self.relaunchAfterReplacement() }
+                    self.log.info("activation completed")
+                    if self.didReplaceExtension {
+                        self.relaunchToPickUpCamera()
+                    } else {
+                        await self.relaunchIfCameraMissing()
+                    }
                 }
             case .willCompleteAfterReboot:
                 self.state = .awaitingApproval
