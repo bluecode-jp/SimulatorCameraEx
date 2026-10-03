@@ -130,6 +130,10 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
 }
 - (BOOL)isHighestPhotoQualitySupported { return NO; }
 - (BOOL)isMultiCamSupported { return NO; }
+// Private. From iOS 27, -[AVCaptureSession commitConfiguration] reads it from
+// every input's active format (ProRes RAW validation); AVFoundation's version
+// dereferences internals that class_createInstance never set up.
+- (id)figCaptureSourceVideoFormat { return nil; }
 - (NSString *)description {
     return [NSString stringWithFormat:@"<SCFormat %dx%d 1-30fps>", _dimensions.width, _dimensions.height];
 }
@@ -330,6 +334,16 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
 - (AVCaptureDevice *)sourceDevice { return [SCDevice shared]; }
 - (AVCaptureDeviceInput *)sourceDeviceInput { return [SCInput shared]; }
 - (AVMediaType)mediaType { return AVMediaTypeVideo; }
+// Connections die with their output (associated object). From iOS 27,
+// -[AVCaptureConnection dealloc] dereferences internals that
+// class_createInstance never set up, so skip it: nothing here is retained.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wobjc-missing-super-calls"
+- (void)dealloc {
+    struct objc_super root = { self, [NSObject class] };
+    ((void (*)(struct objc_super *, SEL))objc_msgSendSuper)(&root, _cmd);
+}
+#pragma clang diagnostic pop
 @end
 
 // MARK: - Fake barcode

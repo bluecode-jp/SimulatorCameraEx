@@ -28,7 +28,7 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 | 項目 | SimulatorCamera（元） | SimulatorCameraEx（このリポジトリ） |
 |---|---|---|
 | シミュレータへの映像の届け方 | Mac に仮想カメラ（CMIO 拡張）を登録し、シミュレータがそれを拾う想定 | シミュレータ内のアプリに注入ライブラリ **SimCamInject** を読み込ませ、そこで AVFoundation のカメラを差し替える |
-| iOS シミュレータで実際に映るか | **映らない**。Xcode 27 で確認したところ、シミュレータにはカメラを扱う仕組み（mediaserverd など）がなく、見えるカメラは 0 台だった | **映る**。iOS 18.5 のシミュレータと Expo Go で確認済み |
+| iOS シミュレータで実際に映るか | **映らない**。Xcode 27 で確認したところ、シミュレータにはカメラを扱う仕組み（mediaserverd など）がなく、見えるカメラは 0 台だった | **映る**。iOS 18.5・iOS 27.0 のシミュレータで確認済み |
 | バーコード読み取り | なし | Mac 側の Vision で検出し、`AVCaptureMetadataOutput` の結果としてアプリに渡す（expo-camera の `onBarcodeScanned` が動く） |
 | 映像ソース | テストパターン、Mac カメラ、動画、静止画、QR | 左の5つに加えて **Code 128 / EAN-13** の生成、**Mac カメラの選択** |
 | 映像の向き | 横 1280×720 のみ | シミュレータ向けは **縦 720×1280**（既定）と横を切り替えられる |
@@ -85,7 +85,8 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
 - macOS 14 以降（macOS 27.0 で確認）。配布版は Apple silicon・Intel の両方に対応
 - Xcode 16 以降（Xcode 27.0 で確認）
   - Xcode 27 ではシミュレータの画面が Device Hub に変わっています（`Xcode.app/Contents/Applications/DeviceHub.app`）。
-- iOS シミュレータ：iOS 18.5（iPhone 16 Pro）と Expo Go 57.0.9 で確認済み
+- iOS シミュレータ：iOS 18.5（iPhone 16 Pro）と Expo Go 57.0.9、iOS 27.0（iPhone 17・iPhone 18 Pro・iPhone 18 Pro Max）で確認済み
+  - iOS 27 のシミュレータでは 1.0.2 以降が必要です（1.0.1 以前は、カメラを開いたアプリがクラッシュします）。
 - ソースからビルドする場合は、次のものも必要です。
   - [XcodeGen](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`）
   - BLUECODE,INC. チームに所属する Apple Developer アカウント

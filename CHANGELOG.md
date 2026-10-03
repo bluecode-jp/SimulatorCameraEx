@@ -7,6 +7,15 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## SimulatorCameraEx 1.0.2 — 2026-10-03
+
+### 修正
+- **iOS 27 のシミュレータで、カメラを開いたアプリがクラッシュする問題を修正。** iOS 27 の
+  AVFoundation は、`commitConfiguration` のたびにカメラのフォーマットの内部情報
+  （`figCaptureSourceVideoFormat`）を読み、出力を破棄するときにも接続の内部情報を読みます。
+  注入した偽のカメラにはこの内部情報がないため、expo-camera のバーコード読み取りなどで
+  `EXC_BAD_ACCESS` になっていました。iOS 18.5 では起きません。
+
 ### 運用
 - **リポジトリを公開しました。** 配布ファイル（DMG・ZIP）は、このリポジトリの Releases（`vX.Y.Z`）に
   置きます。tap `bluecode-jp/homebrew-tap` には Cask だけを置き、Cask のダウンロード元もこちらに
