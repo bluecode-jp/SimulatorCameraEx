@@ -20,6 +20,7 @@ brew install --cask bluecode-jp/tap/simulatorcameraex
 
 - `/Applications/SimulatorCameraEx.app` と、コマンドラインツール `simcamctl` が入ります（PATH も通ります）。
 - 更新：`brew upgrade --cask simulatorcameraex`
+  - 更新した直後に、Android エミュレータや Zoom などで仮想カメラが映らなくなることがあります。そのときは Mac を再起動してください（iOS シミュレータには影響しません）。
 - アンインストール：下の「アンインストール」の手順1〜3をしてから `brew uninstall --cask simulatorcameraex`（設定ファイルも消す場合は `--zap` を付ける）
 
 ### DMG から入れる

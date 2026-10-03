@@ -373,6 +373,7 @@ $SIMCAMCTL android-setup Medium_Phone_API_36.0   # AVD の config.ini の hw.cam
 | EAN-13 の **Inject** が押せない | チェックデジットが合っていません。12桁までで入力すると、自動で付けます |
 | Android エミュレータにドット絵の風景が映る | 前面カメラ（エミュレータの内蔵ダミー）が開いています。カメラアプリで背面カメラに切り替えてください |
 | Android Emulator 欄に「does not list 'SimulatorCamera Virtual'」と出る | 仮想カメラが有効になっていません。**Activate** を押してください |
+| 更新した直後から、Android エミュレータや Zoom などの Mac アプリで仮想カメラが映らない（`simcamctl status` が「"SimulatorCamera Virtual" is not registered」） | 更新でカメラ拡張が入れ替わったあと、新しい拡張が起動しないことがあります（1.0.2 → 1.0.3 で発生）。アプリの再起動では直らなかったので、**Mac を再起動**してください。iOS シミュレータは仮想カメラを使わないので影響はありません |
 
 ---
 

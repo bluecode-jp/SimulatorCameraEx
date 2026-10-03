@@ -7,6 +7,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### ドキュメント
+- **README・INSTALL.md に、更新直後に仮想カメラが映らないときの対処（Mac の再起動）を追記。**
+  1.0.2 → 1.0.3 の更新で、カメラ拡張が入れ替わったあと新しい拡張が起動せず、Android エミュレータで
+  映らなくなりました。アプリの再起動では直らず、Mac の再起動で直りました。
+
 ## SimulatorCameraEx 1.0.3 — 2026-10-03
 
 ### 修正
