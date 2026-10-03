@@ -20,6 +20,7 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <CoreMedia/CoreMedia.h>
+#import <CoreMotion/CoreMotion.h>
 #import <CoreVideo/CoreVideo.h>
 #import <QuartzCore/QuartzCore.h>
 #import <VideoToolbox/VideoToolbox.h>
@@ -59,6 +60,71 @@ static IMP SCHook(Class cls, SEL sel, id block) {
 
 static IMP SCHookClass(Class cls, SEL sel, id block) {
     return SCHook(object_getClass(cls), sel, block);
+}
+
+// MARK: - Safe defaults for the fakes
+//
+// The fakes are made with class_createInstance, so AVFoundation's own
+// implementations of anything they don't override run against internals that
+// were never set up, and crash when they dereference them (iOS 27 added such
+// calls to commitConfiguration). Give every inherited AVFoundation method the
+// fake doesn't implement a "nothing" implementation: 0, NO, nil, or a zeroed
+// struct. NSObject's methods (isEqual:, hash, KVO, retain/release) are left
+// alone, and so are struct returns we don't know how to zero.
+
+static id SCZeroBlock(const char *types) {
+    // Skip type qualifiers (r n N o O R V) before the return type.
+    while (*types && strchr("rnNoORV", *types)) types++;
+#define SC_IS(prefix) (!strncmp(types, prefix, strlen(prefix)))
+    switch (*types) {
+        case 'v': return [^(id s) {} copy];
+        case '@': case '#': return [^id(id s) { return nil; } copy];
+        case 'f': return [^float(id s) { return 0; } copy];
+        case 'd': return [^double(id s) { return 0; } copy];
+        case 'B': case 'c': case 'C': case 's': case 'S': case 'i': case 'I':
+        case 'l': case 'L': case 'q': case 'Q': case '^': case '*': case ':':
+            return [^long long(id s) { return 0; } copy];
+        case '{':
+            if (SC_IS("{CGPoint=") || SC_IS("{CGSize=")) return [^CGSize(id s) { return CGSizeZero; } copy];
+            if (SC_IS("{CGRect=")) return [^CGRect(id s) { return CGRectZero; } copy];
+            if (SC_IS("{CGAffineTransform=")) return [^CGAffineTransform(id s) { return CGAffineTransformIdentity; } copy];
+            // CMTime, CMTimeRange and CMVideoDimensions are anonymous structs.
+            if (SC_IS("{?=qiIq}")) return [^CMTime(id s) { return kCMTimeInvalid; } copy];
+            if (SC_IS("{?={?=qiIq}{?=qiIq}}")) return [^CMTimeRange(id s) { return kCMTimeRangeInvalid; } copy];
+            if (SC_IS("{?=ii}")) return [^CMVideoDimensions(id s) { return (CMVideoDimensions){0, 0}; } copy];
+            if (SC_IS("{_NSRange=")) return [^NSRange(id s) { return NSMakeRange(NSNotFound, 0); } copy];
+            return nil;
+        default:
+            return nil;
+    }
+#undef SC_IS
+}
+
+static void SCFillUnimplemented(Class fake) {
+    unsigned count = 0;
+    Method *own = class_copyMethodList(fake, &count);
+    NSMutableSet *implemented = [NSMutableSet set];
+    for (unsigned i = 0; i < count; i++) [implemented addObject:NSStringFromSelector(method_getName(own[i]))];
+    free(own);
+    unsigned filled = 0;
+    for (Class cls = class_getSuperclass(fake); cls && cls != [NSObject class]; cls = class_getSuperclass(cls)) {
+        Method *methods = class_copyMethodList(cls, &count);
+        for (unsigned i = 0; i < count; i++) {
+            SEL sel = method_getName(methods[i]);
+            NSString *name = NSStringFromSelector(sel);
+            if ([implemented containsObject:name] || class_getInstanceMethod([NSObject class], sel)) continue;
+            if ([name hasPrefix:@"init"] || [name hasPrefix:@"copy"] || [name hasPrefix:@"mutableCopy"]
+                || [name hasPrefix:@"."] || [name isEqualToString:@"dealloc"]) continue;
+            id block = SCZeroBlock(method_getTypeEncoding(methods[i]));
+            [implemented addObject:name];
+            if (!block) continue;
+            class_addMethod(fake, sel, imp_implementationWithBlock(block), method_getTypeEncoding(methods[i]));
+            [block release];
+            filled++;
+        }
+        free(methods);
+    }
+    os_log_debug(SCLog(), "%{public}s: %u inherited methods answer with defaults", class_getName(fake), filled);
 }
 
 // MARK: - Fake formats
@@ -130,6 +196,7 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
 }
 - (BOOL)isHighestPhotoQualitySupported { return NO; }
 - (BOOL)isMultiCamSupported { return NO; }
+- (NSArray<NSNumber *> *)supportedColorSpaces { return @[@(AVCaptureColorSpace_sRGB)]; }
 // Private. From iOS 27, -[AVCaptureSession commitConfiguration] reads it from
 // every input's active format (ProRes RAW validation); AVFoundation's version
 // dereferences internals that class_createInstance never set up.
@@ -258,6 +325,9 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
 - (NSArray<NSNumber *> *)virtualDeviceSwitchOverVideoZoomFactors { return @[]; }
 - (NSArray<AVCaptureDevice *> *)constituentDevices { return @[]; }
 - (BOOL)isVirtualDevice { return NO; }
+- (CGFloat)displayVideoZoomFactorMultiplier { return 1; }
+- (AVCaptureColorSpace)activeColorSpace { return AVCaptureColorSpace_sRGB; }
+- (void)setActiveColorSpace:(AVCaptureColorSpace)space {}
 
 @end
 
@@ -274,8 +344,54 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
     return input;
 }
 - (AVCaptureDevice *)device { return [SCDevice shared]; }
-- (NSArray<AVCaptureInputPort *> *)ports { return @[]; }
 - (NSString *)description { return @"<SCInput SimulatorCamera>"; }
+@end
+
+// MARK: - Fake input port
+//
+// For apps that wire connections themselves (addInputWithNoConnections +
+// AVCaptureConnection(inputPorts:output:), e.g. react-native-vision-camera 5).
+
+@interface SCInputPort : AVCaptureInputPort
+@end
+
+@implementation SCInputPort {
+    AVMediaType _mediaType;
+}
++ (SCInputPort *)portWithMediaType:(AVMediaType)type {
+    SCInputPort *port = class_createInstance([SCInputPort class], 0);
+    port->_mediaType = [type copy];
+    return port;
+}
+/// The camera's video port.
++ (SCInputPort *)shared {
+    static SCInputPort *port;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ port = [self portWithMediaType:AVMediaTypeVideo]; });
+    return port;
+}
+/// The port metadata (barcode) outputs connect to.
++ (SCInputPort *)metadata {
+    static SCInputPort *port;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ port = [self portWithMediaType:AVMediaTypeMetadataObject]; });
+    return port;
+}
+- (AVCaptureInput *)input { return [SCInput shared]; }
+- (AVMediaType)mediaType { return _mediaType; }
+- (CMFormatDescriptionRef)formatDescription {
+    return [_mediaType isEqualToString:AVMediaTypeVideo] ? [SCFormat all].firstObject.formatDescription : NULL;
+}
+- (BOOL)isEnabled { return YES; }
+- (void)setEnabled:(BOOL)enabled {}
+- (CMClockRef)clock { return CMClockGetHostTimeClock(); }
+- (AVCaptureDeviceType)sourceDeviceType { return AVCaptureDeviceTypeBuiltInWideAngleCamera; }
+- (AVCaptureDevicePosition)sourceDevicePosition { return AVCaptureDevicePositionBack; }
+- (NSString *)description { return [NSString stringWithFormat:@"<SCInputPort SimulatorCamera %@>", _mediaType]; }
+@end
+
+@implementation SCInput (Ports)
+- (NSArray<AVCaptureInputPort *> *)ports { return @[[SCInputPort shared], [SCInputPort metadata]]; }
 @end
 
 // MARK: - Fake connection
@@ -306,7 +422,9 @@ static IMP SCHookClass(Class cls, SEL sel, id block) {
 
 - (AVCaptureOutput *)output { return _output; }
 - (AVCaptureVideoPreviewLayer *)videoPreviewLayer { return _layer; }
-- (NSArray<AVCaptureInputPort *> *)inputPorts { return @[]; }
+- (NSArray<AVCaptureInputPort *> *)inputPorts {
+    return @[[_output isKindOfClass:[AVCaptureMetadataOutput class]] ? [SCInputPort metadata] : [SCInputPort shared]];
+}
 - (BOOL)isEnabled { return _enabled; }
 - (void)setEnabled:(BOOL)enabled { _enabled = enabled; }
 - (BOOL)isActive { return YES; }
@@ -453,7 +571,8 @@ static NSArray<SCCodeObject *> *SCCurrentCodes(CMTime time, CGSize frameSize) {
 
 // MARK: - Per-object state (associated objects)
 
-static char kSCInputsKey, kSCRunningKey, kSCConnectionKey, kSCVideoSettingsKey, kSCPreviewSublayerKey, kSCDiscoveryVideoKey,
+static char kSCOutputConnectedKey, kSCLayerManualKey, kSCLayerConnectedKey, kSCLayerPreviewingKey;
+static char kSCInputsKey, kSCRunningKey, kSCAppControlsRunningKey, kSCConnectionKey, kSCVideoSettingsKey, kSCPreviewSublayerKey, kSCDiscoveryVideoKey,
     kSCMetadataTypesKey;
 
 static NSMutableArray *SCSessionInputs(AVCaptureSession *session) {
@@ -481,6 +600,44 @@ static SCConnection *SCConnectionFor(AVCaptureOutput *output) {
         [c release];
     }
     return c;
+}
+
+/// Outputs see the fake camera once they are connected: added with
+/// addOutput: (AVFoundation connects those to every input by itself), or
+/// connected by hand with addConnection:. Until then they have no
+/// connections, like the real thing.
+static BOOL SCOutputIsConnected(AVCaptureOutput *output) {
+    return [objc_getAssociatedObject(output, &kSCOutputConnectedKey) boolValue];
+}
+
+static void SCSetOutputConnected(AVCaptureOutput *output, BOOL connected) {
+    objc_setAssociatedObject(output, &kSCOutputConnectedKey, connected ? @YES : nil, OBJC_ASSOCIATION_RETAIN);
+}
+
+/// Preview layers given a session "with no connection" show frames only once
+/// a connection to them is added by hand.
+static BOOL SCLayerShowsFakeCamera(AVCaptureVideoPreviewLayer *layer) {
+    if (![objc_getAssociatedObject(layer, &kSCLayerManualKey) boolValue]) return YES;
+    return [objc_getAssociatedObject(layer, &kSCLayerConnectedKey) boolValue];
+}
+
+static SCConnection *SCConnectionForLayer(AVCaptureVideoPreviewLayer *layer) {
+    SCConnection *c = objc_getAssociatedObject(layer, &kSCConnectionKey);
+    if (!c) {
+        c = [SCConnection connectionForOutput:nil layer:layer];
+        objc_setAssociatedObject(layer, &kSCConnectionKey, c, OBJC_ASSOCIATION_RETAIN);
+        [c release];
+    }
+    return c;
+}
+
+/// iOS 18's isPreviewing (KVO key "previewing"), which libraries watch to
+/// know the preview shows frames. Call on the main thread.
+static void SCSetLayerPreviewing(AVCaptureVideoPreviewLayer *layer, BOOL previewing) {
+    if ([objc_getAssociatedObject(layer, &kSCLayerPreviewingKey) boolValue] == previewing) return;
+    [layer willChangeValueForKey:@"previewing"];
+    objc_setAssociatedObject(layer, &kSCLayerPreviewingKey, previewing ? @YES : nil, OBJC_ASSOCIATION_RETAIN);
+    [layer didChangeValueForKey:@"previewing"];
 }
 
 // MARK: - Pump
@@ -538,7 +695,7 @@ static void SCUpdatePreviewLayers(CVPixelBufferRef pixelBuffer) {
     NSMutableArray *live = [NSMutableArray array];
     for (AVCaptureVideoPreviewLayer *layer in layers) {
         AVCaptureSession *session = layer.session;
-        if (session && SCSessionIsRunning(session)) [live addObject:layer];
+        if (session && SCSessionIsRunning(session) && SCLayerShowsFakeCamera(layer)) [live addObject:layer];
     }
     [layers release];
     if (live.count == 0) return;
@@ -568,6 +725,7 @@ static void SCUpdatePreviewLayers(CVPixelBufferRef pixelBuffer) {
             content.frame = layer.bounds;
             content.contentsGravity = SCGravity(layer.videoGravity);
             content.contents = (id)image;
+            SCSetLayerPreviewing(layer, YES);
         }
         [CATransaction commit];
         [live release];
@@ -598,6 +756,7 @@ static void SCDeliverMetadata(AVCaptureMetadataOutput *output, NSArray<SCCodeObj
 
 static void SCDeliverToOutputs(AVCaptureSession *session, CMSampleBufferRef sample, NSArray<SCCodeObject *> *codes) {
     for (AVCaptureOutput *output in session.outputs) {
+        if (!SCOutputIsConnected(output)) continue;
         if ([output isKindOfClass:[AVCaptureMetadataOutput class]]) {
             SCDeliverMetadata((AVCaptureMetadataOutput *)output, codes);
             continue;
@@ -689,6 +848,14 @@ static void SCInstallDeviceHooks(void) {
         if ([uid isEqualToString:kSCDeviceUniqueID]) return [SCDevice shared];
         return ((id (*)(id, SEL, NSString *))origWithID)(cls, @selector(deviceWithUniqueID:), uid);
     });
+    // iOS 17+. Without these the Simulator answers with a nameless placeholder
+    // device that cannot be used as an input.
+    if (class_getClassMethod(dev, @selector(systemPreferredCamera))) {
+        SCHookClass(dev, @selector(systemPreferredCamera), ^id(id cls) { return [SCDevice shared]; });
+        SCHookClass(dev, @selector(userPreferredCamera), ^id(id cls) { return [SCDevice shared]; });
+        // There is only one camera; setting it (e.g. expo-camera's fallback) changes nothing.
+        SCHookClass(dev, @selector(setUserPreferredCamera:), ^(id cls, AVCaptureDevice *device) {});
+    }
     __block IMP origStatus = SCHookClass(dev, @selector(authorizationStatusForMediaType:), ^NSInteger(id cls, AVMediaType type) {
         if ([type isEqualToString:AVMediaTypeVideo]) return AVAuthorizationStatusAuthorized;
         return ((NSInteger (*)(id, SEL, AVMediaType))origStatus)(cls, @selector(authorizationStatusForMediaType:), type);
@@ -736,6 +903,17 @@ static void SCInstallInputHooks(void) {
     });
 }
 
+static void SCStartFakeSession(AVCaptureSession *session, const char *reason) {
+    @synchronized (gLock) {
+        if (SCSessionIsRunning(session)) return;
+        objc_setAssociatedObject(session, &kSCRunningKey, @YES, OBJC_ASSOCIATION_RETAIN);
+        [gSessions addObject:session];
+    }
+    os_log(SCLog(), "session %p: %{public}s (fake)", session, reason);
+    SCStartPumpIfNeeded();
+    [[NSNotificationCenter defaultCenter] postNotificationName:AVCaptureSessionDidStartRunningNotification object:session];
+}
+
 static void SCInstallSessionHooks(void) {
     Class cls = [AVCaptureSession class];
 
@@ -776,18 +954,34 @@ static void SCInstallSessionHooks(void) {
         }
     });
     __block IMP origStart = SCHook(cls, @selector(startRunning), ^(AVCaptureSession *self) {
+        objc_setAssociatedObject(self, &kSCAppControlsRunningKey, @YES, OBJC_ASSOCIATION_RETAIN);
         if (!SCSessionHasFakeInput(self)) {
             ((void (*)(id, SEL))origStart)(self, @selector(startRunning));
             return;
         }
-        if (SCSessionIsRunning(self)) return;
-        objc_setAssociatedObject(self, &kSCRunningKey, @YES, OBJC_ASSOCIATION_RETAIN);
-        @synchronized (gLock) { [gSessions addObject:self]; }
-        os_log(SCLog(), "session %p: startRunning (fake)", self);
-        SCStartPumpIfNeeded();
-        [[NSNotificationCenter defaultCenter] postNotificationName:AVCaptureSessionDidStartRunningNotification object:self];
+        SCStartFakeSession(self, "startRunning");
+    });
+    // Some camera libraries compile their session start out of simulator
+    // builds (expo-camera 17: startSession() is `#if targetEnvironment(simulator)
+    // return`), so the session is configured with our camera but never started
+    // and the preview stays black. Start such a session ourselves shortly after
+    // it is configured, unless the app has started or stopped it by then.
+    __block IMP origCommit = SCHook(cls, @selector(commitConfiguration), ^(AVCaptureSession *self) {
+        ((void (*)(id, SEL))origCommit)(self, @selector(commitConfiguration));
+        if (!SCSessionHasFakeInput(self) || SCSessionIsRunning(self)
+            || objc_getAssociatedObject(self, &kSCAppControlsRunningKey)) return;
+        [self retain];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
+                       dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+            if (SCSessionHasFakeInput(self) && !SCSessionIsRunning(self)
+                && !objc_getAssociatedObject(self, &kSCAppControlsRunningKey)) {
+                SCStartFakeSession(self, "auto-start (the app never called startRunning)");
+            }
+            [self release];
+        });
     });
     __block IMP origStop = SCHook(cls, @selector(stopRunning), ^(AVCaptureSession *self) {
+        objc_setAssociatedObject(self, &kSCAppControlsRunningKey, @YES, OBJC_ASSOCIATION_RETAIN);
         if (!SCSessionIsRunning(self)) {
             ((void (*)(id, SEL))origStop)(self, @selector(stopRunning));
             return;
@@ -795,6 +989,14 @@ static void SCInstallSessionHooks(void) {
         objc_setAssociatedObject(self, &kSCRunningKey, @NO, OBJC_ASSOCIATION_RETAIN);
         @synchronized (gLock) { [gSessions removeObject:self]; }
         os_log(SCLog(), "session %p: stopRunning (fake)", self);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSArray *layers;
+            @synchronized (gLock) { layers = [[gLayers allObjects] retain]; }
+            for (AVCaptureVideoPreviewLayer *layer in layers) {
+                if (layer.session == self) SCSetLayerPreviewing(layer, NO);
+            }
+            [layers release];
+        });
         SCStopPumpIfIdle();
         [[NSNotificationCenter defaultCenter] postNotificationName:AVCaptureSessionDidStopRunningNotification object:self];
     });
@@ -822,6 +1024,100 @@ static void SCInstallSessionHooks(void) {
         BOOL real = ((BOOL (*)(id, SEL, id))origCanAddOutput)(self, @selector(canAddOutput:), output);
         return real || (SCSessionHasFakeInput(self) && ![self.outputs containsObject:output]);
     });
+
+    // addOutput: connects the output to the inputs by itself; the
+    // NoConnections variants leave that to addConnection: below.
+    __block IMP origAddOutput = SCHook(cls, @selector(addOutput:), ^(AVCaptureSession *self, AVCaptureOutput *output) {
+        ((void (*)(id, SEL, id))origAddOutput)(self, @selector(addOutput:), output);
+        if ([self.outputs containsObject:output]) SCSetOutputConnected(output, YES);
+    });
+    __block IMP origRemoveOutput = SCHook(cls, @selector(removeOutput:), ^(AVCaptureSession *self, AVCaptureOutput *output) {
+        SCSetOutputConnected(output, NO);
+        ((void (*)(id, SEL, id))origRemoveOutput)(self, @selector(removeOutput:), output);
+    });
+    __block IMP origAddInputNoConn = SCHook(cls, @selector(addInputWithNoConnections:), ^(AVCaptureSession *self, AVCaptureInput *input) {
+        if ([input isKindOfClass:[SCInput class]]) {
+            NSMutableArray *inputs = SCSessionInputs(self);
+            if (![inputs containsObject:input]) [inputs addObject:input];
+            os_log(SCLog(), "session %p: fake input added (no connections)", self);
+            return;
+        }
+        ((void (*)(id, SEL, id))origAddInputNoConn)(self, @selector(addInputWithNoConnections:), input);
+    });
+    __block IMP origCanAddConn = SCHook(cls, @selector(canAddConnection:), ^BOOL(AVCaptureSession *self, AVCaptureConnection *c) {
+        if ([c isKindOfClass:[SCConnection class]]) {
+            if (c.output) return [self.outputs containsObject:c.output] && !SCOutputIsConnected(c.output);
+            return c.videoPreviewLayer.session == self;
+        }
+        return ((BOOL (*)(id, SEL, id))origCanAddConn)(self, @selector(canAddConnection:), c);
+    });
+    __block IMP origAddConn = SCHook(cls, @selector(addConnection:), ^(AVCaptureSession *self, AVCaptureConnection *c) {
+        if (![c isKindOfClass:[SCConnection class]]) {
+            ((void (*)(id, SEL, id))origAddConn)(self, @selector(addConnection:), c);
+            return;
+        }
+        // The connection the app made becomes the one its output or layer reports.
+        if (c.output) {
+            objc_setAssociatedObject(c.output, &kSCConnectionKey, c, OBJC_ASSOCIATION_RETAIN);
+            SCSetOutputConnected(c.output, YES);
+        } else if (c.videoPreviewLayer) {
+            objc_setAssociatedObject(c.videoPreviewLayer, &kSCConnectionKey, c, OBJC_ASSOCIATION_RETAIN);
+            objc_setAssociatedObject(c.videoPreviewLayer, &kSCLayerConnectedKey, @YES, OBJC_ASSOCIATION_RETAIN);
+        }
+        os_log(SCLog(), "session %p: fake connection added to %{public}@", self, c.output ?: c.videoPreviewLayer);
+    });
+    __block IMP origRemoveConn = SCHook(cls, @selector(removeConnection:), ^(AVCaptureSession *self, AVCaptureConnection *c) {
+        if (![c isKindOfClass:[SCConnection class]]) {
+            ((void (*)(id, SEL, id))origRemoveConn)(self, @selector(removeConnection:), c);
+            return;
+        }
+        if (c.output) SCSetOutputConnected(c.output, NO);
+        else if (c.videoPreviewLayer) {
+            objc_setAssociatedObject(c.videoPreviewLayer, &kSCLayerConnectedKey, nil, OBJC_ASSOCIATION_RETAIN);
+        }
+    });
+    __block IMP origConnections = SCHook(cls, @selector(connections), ^NSArray *(AVCaptureSession *self) {
+        NSArray *real = ((NSArray * (*)(id, SEL))origConnections)(self, @selector(connections));
+        if (!SCSessionHasFakeInput(self)) return real;
+        NSMutableArray *all = [NSMutableArray arrayWithArray:real ?: @[]];
+        for (AVCaptureOutput *output in self.outputs) {
+            if (SCOutputIsConnected(output)) [all addObject:SCConnectionFor(output)];
+        }
+        NSArray *layers;
+        @synchronized (gLock) { layers = [[gLayers allObjects] retain]; }
+        for (AVCaptureVideoPreviewLayer *layer in layers) {
+            if (layer.session == self && SCLayerShowsFakeCamera(layer)) [all addObject:SCConnectionForLayer(layer)];
+        }
+        [layers release];
+        return all;
+    });
+}
+
+/// Free an object that +alloc made but no initializer set up, without
+/// running its -dealloc (AVCaptureConnection's reads the missing internals).
+static void SCDiscardUninitialized(id object) {
+    objc_destructInstance(object);
+    free(object);
+}
+
+/// Connections the app builds itself from our input port become fakes.
+static void SCInstallConnectionHooks(void) {
+    Class cls = [AVCaptureConnection class];
+    __block IMP origInitPorts = SCHook(cls, @selector(initWithInputPorts:output:), ^id(id self, NSArray *ports, AVCaptureOutput *output) {
+        if ([ports.firstObject isKindOfClass:[SCInputPort class]]) {
+            SCDiscardUninitialized(self);
+            return [SCConnection connectionForOutput:output layer:nil];
+        }
+        return ((id (*)(id, SEL, id, id))origInitPorts)(self, @selector(initWithInputPorts:output:), ports, output);
+    });
+    __block IMP origInitLayer = SCHook(cls, @selector(initWithInputPort:videoPreviewLayer:),
+        ^id(id self, AVCaptureInputPort *port, AVCaptureVideoPreviewLayer *layer) {
+            if ([port isKindOfClass:[SCInputPort class]]) {
+                SCDiscardUninitialized(self);
+                return [SCConnection connectionForOutput:nil layer:layer];
+            }
+            return ((id (*)(id, SEL, id, id))origInitLayer)(self, @selector(initWithInputPort:videoPreviewLayer:), port, layer);
+        });
 }
 
 static IMP gOrigOutputConnections;
@@ -847,12 +1143,13 @@ static void SCInstallOutputHooks(void) {
     Class out = [AVCaptureOutput class];
     __block IMP origConnWithType = SCHook(out, @selector(connectionWithMediaType:), ^id(AVCaptureOutput *self, AVMediaType type) {
         id real = ((id (*)(id, SEL, id))origConnWithType)(self, @selector(connectionWithMediaType:), type);
-        if (real || ![type isEqualToString:AVMediaTypeVideo]) return real;
+        if (real || ![type isEqualToString:AVMediaTypeVideo] || !SCOutputIsConnected(self)) return real;
         return SCConnectionFor(self);
     });
     __block IMP origConns = SCHook(out, @selector(connections), ^NSArray *(AVCaptureOutput *self) {
         NSArray *real = ((NSArray * (*)(id, SEL))origConns)(self, @selector(connections));
-        return real.count ? real : @[SCConnectionFor(self)];
+        if (real.count || !SCOutputIsConnected(self)) return real;
+        return @[SCConnectionFor(self)];
     });
     gOrigOutputConnections = origConns;
 
@@ -902,6 +1199,11 @@ static void SCInstallPreviewHooks(void) {
         @synchronized (gLock) { [gLayers addObject:layer]; }
     };
     track = [track copy];
+    void (^setManual)(id, BOOL) = ^(id layer, BOOL manual) {
+        objc_setAssociatedObject(layer, &kSCLayerManualKey, manual ? @YES : nil, OBJC_ASSOCIATION_RETAIN);
+        objc_setAssociatedObject(layer, &kSCLayerConnectedKey, nil, OBJC_ASSOCIATION_RETAIN);
+    };
+    setManual = [setManual copy];
     __block IMP origInitSession = SCHook(cls, @selector(initWithSession:), ^id(id self, AVCaptureSession *session) {
         id layer = ((id (*)(id, SEL, id))origInitSession)(self, @selector(initWithSession:), session);
         if (layer) track(layer);
@@ -909,13 +1211,25 @@ static void SCInstallPreviewHooks(void) {
     });
     __block IMP origInitNoConn = SCHook(cls, @selector(initWithSessionWithNoConnection:), ^id(id self, AVCaptureSession *session) {
         id layer = ((id (*)(id, SEL, id))origInitNoConn)(self, @selector(initWithSessionWithNoConnection:), session);
-        if (layer) track(layer);
+        if (layer) { setManual(layer, YES); track(layer); }
         return layer;
     });
     __block IMP origSetSession = SCHook(cls, @selector(setSession:), ^(id self, AVCaptureSession *session) {
         ((void (*)(id, SEL, id))origSetSession)(self, @selector(setSession:), session);
+        setManual(self, NO);
         track(self);
     });
+    __block IMP origSetNoConn = SCHook(cls, @selector(setSessionWithNoConnection:), ^(id self, AVCaptureSession *session) {
+        ((void (*)(id, SEL, id))origSetNoConn)(self, @selector(setSessionWithNoConnection:), session);
+        setManual(self, YES);
+        track(self);
+    });
+    if (class_getInstanceMethod(cls, @selector(isPreviewing))) {
+        __block IMP origPreviewing = SCHook(cls, @selector(isPreviewing), ^BOOL(AVCaptureVideoPreviewLayer *self) {
+            if ([objc_getAssociatedObject(self, &kSCLayerPreviewingKey) boolValue]) return YES;
+            return ((BOOL (*)(id, SEL))origPreviewing)(self, @selector(isPreviewing));
+        });
+    }
     __block IMP origTransform = SCHook(cls, @selector(transformedMetadataObjectForMetadataObject:),
         ^id(AVCaptureVideoPreviewLayer *self, AVMetadataObject *object) {
             if ([object isKindOfClass:[SCCodeObject class]]) return [(SCCodeObject *)object transformedForLayer:self];
@@ -923,14 +1237,89 @@ static void SCInstallPreviewHooks(void) {
         });
     __block IMP origConnection = SCHook(cls, @selector(connection), ^id(AVCaptureVideoPreviewLayer *self) {
         id real = ((id (*)(id, SEL))origConnection)(self, @selector(connection));
-        if (real || !self.session || !SCSessionHasFakeInput(self.session)) return real;
-        SCConnection *c = objc_getAssociatedObject(self, &kSCConnectionKey);
-        if (!c) {
-            c = [SCConnection connectionForOutput:nil layer:self];
-            objc_setAssociatedObject(self, &kSCConnectionKey, c, OBJC_ASSOCIATION_RETAIN);
-            [c release];
-        }
-        return c;
+        if (real || !self.session || !SCSessionHasFakeInput(self.session) || !SCLayerShowsFakeCamera(self)) return real;
+        return SCConnectionForLayer(self);
+    });
+}
+
+// MARK: - Accelerometer
+//
+// Camera libraries that rotate frames by the device's physical orientation
+// read the accelerometer (react-native-vision-camera 5 by default, which
+// throws "accelerometer is not available" otherwise). The Simulator has none,
+// so when it reports none, report a device held upright in portrait.
+
+@interface SCAccelerometerData : CMAccelerometerData
+@end
+
+@implementation SCAccelerometerData
++ (SCAccelerometerData *)shared {
+    static SCAccelerometerData *data;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ data = class_createInstance([SCAccelerometerData class], 0); });
+    return data;
+}
+- (CMAcceleration)acceleration { return (CMAcceleration){0, -1, 0}; }
+- (NSTimeInterval)timestamp { return [NSProcessInfo processInfo].systemUptime; }
+- (NSString *)description { return @"<SCAccelerometerData portrait upright>"; }
+@end
+
+/// Cancels the update timer when the motion manager that owns it goes away.
+@interface SCTimerBox : NSObject
+@property (nonatomic, assign) dispatch_source_t timer;
+@end
+
+@implementation SCTimerBox
+- (void)dealloc {
+    if (_timer) { dispatch_source_cancel(_timer); dispatch_release(_timer); }
+    [super dealloc];
+}
+@end
+
+static char kSCAccelTimerKey, kSCAccelActiveKey;
+
+static void SCInstallMotionHooks(void) {
+    Class cls = [CMMotionManager class];
+    CMMotionManager *probe = [[cls alloc] init];
+    BOOL available = probe.isAccelerometerAvailable;
+    [probe release];
+    if (available) return;
+
+    SCHook(cls, @selector(isAccelerometerAvailable), ^BOOL(id self) { return YES; });
+    SCHook(cls, @selector(isAccelerometerActive), ^BOOL(id self) {
+        return [objc_getAssociatedObject(self, &kSCAccelActiveKey) boolValue];
+    });
+    SCHook(cls, @selector(accelerometerData), ^CMAccelerometerData *(id self) {
+        return [objc_getAssociatedObject(self, &kSCAccelActiveKey) boolValue] ? [SCAccelerometerData shared] : nil;
+    });
+    SCHook(cls, @selector(startAccelerometerUpdates), ^(id self) {
+        objc_setAssociatedObject(self, &kSCAccelActiveKey, @YES, OBJC_ASSOCIATION_RETAIN);
+    });
+    SCHook(cls, @selector(startAccelerometerUpdatesToQueue:withHandler:),
+        ^(CMMotionManager *self, NSOperationQueue *queue, CMAccelerometerHandler handler) {
+            objc_setAssociatedObject(self, &kSCAccelActiveKey, @YES, OBJC_ASSOCIATION_RETAIN);
+            if (!queue || !handler) return;
+            CMAccelerometerHandler copy = [handler copy];
+            [queue retain];
+            NSTimeInterval interval = MAX(self.accelerometerUpdateInterval, 0.05);
+            dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0,
+                                                             dispatch_get_global_queue(QOS_CLASS_UTILITY, 0));
+            dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, 0), (uint64_t)(interval * NSEC_PER_SEC),
+                                      (uint64_t)(interval * NSEC_PER_SEC / 10));
+            dispatch_source_set_event_handler(timer, ^{
+                [queue addOperationWithBlock:^{ copy([SCAccelerometerData shared], nil); }];
+            });
+            dispatch_source_set_cancel_handler(timer, ^{ [copy release]; [queue release]; });
+            SCTimerBox *box = [SCTimerBox new];
+            box.timer = timer;
+            objc_setAssociatedObject(self, &kSCAccelTimerKey, box, OBJC_ASSOCIATION_RETAIN);
+            [box release];
+            dispatch_resume(timer);
+            os_log(SCLog(), "accelerometer: reporting portrait upright (the Simulator has none)");
+        });
+    SCHook(cls, @selector(stopAccelerometerUpdates), ^(id self) {
+        objc_setAssociatedObject(self, &kSCAccelActiveKey, nil, OBJC_ASSOCIATION_RETAIN);
+        objc_setAssociatedObject(self, &kSCAccelTimerKey, nil, OBJC_ASSOCIATION_RETAIN);
     });
 }
 
@@ -955,12 +1344,18 @@ static void SCInit(void) {
         gSessions = [[NSHashTable weakObjectsHashTable] retain];
         gLayers = [[NSHashTable weakObjectsHashTable] retain];
         gPumpQueue = dispatch_queue_create("jp.co.bluecode.SimCamInject.pump", DISPATCH_QUEUE_SERIAL);
+        for (Class fake in @[[SCFormat class], [SCFrameRateRange class], [SCDevice class], [SCInput class],
+                             [SCInputPort class], [SCConnection class]]) {
+            SCFillUnimplemented(fake);
+        }
         SCInstallDeviceHooks();
         SCInstallInputHooks();
         SCInstallSessionHooks();
+        SCInstallConnectionHooks();
         SCInstallOutputHooks();
         SCInstallPreviewHooks();
         SCInstallWebKitHooks();
+        SCInstallMotionHooks();
         os_log(SCLog(), "SimCamInject loaded into %{public}@", [[NSBundle mainBundle] bundleIdentifier]);
     }
 }

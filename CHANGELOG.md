@@ -7,6 +7,34 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## SimulatorCameraEx 1.0.3 — 2026-10-03
+
+### 修正
+- **expo-camera 17 でビルドしたアプリで、カメラ画面が真っ黒になる問題を修正。** expo-camera 17 は
+  シミュレータ向けのビルドでセッションの開始（`startSession()`）を省くため、偽のカメラを
+  組み込んでも `startRunning` が呼ばれず、映像が流れませんでした。カメラを組み込んだのに
+  アプリが 0.5 秒たっても開始も停止もしないセッションは、注入ライブラリが代わりに開始します。
+- **`AVCaptureDevice.systemPreferredCamera` / `userPreferredCamera` が偽のカメラを返すようにしました。**
+  これまではシミュレータの、名前のない使えないデバイスが返っていました。
+
+### 追加
+- **react-native-vision-camera 5 に対応。** 接続を手で張る組み方（`addInputWithNoConnections`・
+  `addOutputWithNoConnections`・`AVCaptureConnection(inputPorts:output:)`・`addConnection`・
+  `setSessionWithNoConnection`・`session.connections`）に対応しました。偽のカメラ入力には、映像用と
+  メタデータ（バーコード）用のポートがあります。出力は、セッションに入れて接続されるまで
+  接続を持たないようにしました（実機と同じ）。
+- **プレビューの `isPreviewing`（iOS 18）** が、映像を描き始めると YES になり、変化を通知します。
+- **加速度センサーのないシミュレータでは、縦に立てた向きを返すようにしました。**
+  react-native-vision-camera 5 は、既定で加速度センサーから向きを取るため、シミュレータでは
+  起動直後に止まっていました。本物の加速度センサーがある環境では何もしません。
+- **偽のカメラが実装していない AVFoundation のメソッドは、0・NO・nil などを返すようにしました。**
+  1.0.2 で直したクラッシュのように、新しい iOS で AVFoundation が偽のカメラに新しい問い合わせを
+  しても、落ちにくくするためです。
+- **README に「検証済み環境」を追加。** iOS 27.0 のシミュレータと Android 16 のエミュレータで、
+  expo-camera 17.0.10・57.0.6、react-native-vision-camera 5.2.3、Web ページ（Safari・Chrome）を確かめた結果です。
+- **`scripts/test-inject.sh` と `SimCamInject/tests/` を追加。** 起動中のシミュレータで、注入ライブラリの
+  4通りの使われ方を確かめます。
+
 ## SimulatorCameraEx 1.0.2 — 2026-10-03
 
 ### 修正

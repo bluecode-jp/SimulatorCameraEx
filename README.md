@@ -87,6 +87,8 @@ SimulatorCameraEx は Mac アプリで作った映像を、シミュレータ内
   - Xcode 27 ではシミュレータの画面が Device Hub に変わっています（`Xcode.app/Contents/Applications/DeviceHub.app`）。
 - iOS シミュレータ：iOS 18.5（iPhone 16 Pro）と Expo Go 57.0.9、iOS 27.0（iPhone 17・iPhone 18 Pro・iPhone 18 Pro Max）で確認済み
   - iOS 27 のシミュレータでは 1.0.2 以降が必要です（1.0.1 以前は、カメラを開いたアプリがクラッシュします）。
+- Android エミュレータ：Android Emulator 37.1.11・Android 16（API 36）で確認済み
+- 確かめたライブラリとバージョンは「[検証済み環境](#検証済み環境)」を参照してください。
 - ソースからビルドする場合は、次のものも必要です。
   - [XcodeGen](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`）
   - BLUECODE,INC. チームに所属する Apple Developer アカウント
@@ -289,6 +291,47 @@ $SIMCAMCTL android-setup Medium_Phone_API_36.0   # AVD の config.ini の hw.cam
 
 ---
 
+## 検証済み環境
+
+2026-10-03 に、次の環境で確かめました。
+
+### 環境
+
+| 項目 | バージョン |
+|---|---|
+| Mac | macOS 27.0.1（Apple M4 Pro） |
+| Xcode | 27.0 |
+| iOS シミュレータ | iOS 27.0（iPhone 17・iPhone 18 Pro・iPhone 18 Pro Max） |
+| Android エミュレータ | Android Emulator 37.1.11、Android 16（API 36、Google Play 付き arm64-v8a のイメージ） |
+| Android の Chrome | 133.0.6943.137 |
+| 操作の自動化 | Maestro 2.11.0 |
+
+以前の版では、iOS 18.5 のシミュレータ（iPhone 16 Pro）と Expo Go 57.0.9 でも確かめています。
+
+### カメラの使い方ごとの結果
+
+映像が映ること・バーコード（QR）が読めることを確かめました。✓ は確認済み、— は対象外です。
+
+| 使い方 | 確認したもの | iOS シミュレータ | Android エミュレータ |
+|---|---|---|---|
+| expo-camera 17 系 | 17.0.10（Expo SDK 54・React Native 0.81 のアプリ） | ✓ | ✓ |
+| expo-camera 55 系以降 | 57.0.6（Expo SDK 57・React Native 0.86） | ✓ | ✓ |
+| react-native-vision-camera 5 | 5.2.3。読み取りは、iOS が本体の `useObjectOutput`、Android が公式プラグイン react-native-vision-camera-barcode-scanner 5.2.3 | ✓ | ✓ |
+| AVFoundation を直接使うアプリ | `SimCamInject/tests/` の確認用プログラム（4通り） | ✓ | — |
+| Web ページ | `getUserMedia` と、ページ側の JavaScript（jsQR）での QR 読み取り | ✓（Safari） | ✓（Chrome） |
+
+- iOS シミュレータについて
+  - expo-camera 17 は、シミュレータ向けビルドでセッションを開始しません。代わりに注入ライブラリが開始します。
+  - expo-camera 55・56・58（58.0.7）は、ソースが 57 と同じ作りであることだけ確かめています。
+  - react-native-vision-camera 5 は、接続を手で張る組み方をします。注入ライブラリはこれにも対応しています。加速度センサーのないシミュレータでは、縦に立てた向きを返します。
+- Android エミュレータについて
+  - 注入はしません。仮想カメラ「SimulatorCamera Virtual」をエミュレータの背面カメラにしています。
+  - react-native-vision-camera 5 の `useObjectOutput` は iOS 専用です（Android では「CameraObjectOutput is not available on Android!」になります）。Android では公式プラグインで読み取ります。
+  - アプリのプレビューでは、QR が右に寄って見えます。右端が少し切れることもありますが、読み取りは問題ありませんでした（理由は「[注意](#注意)」を参照）。
+- expo-camera 17 系のアプリでは、QR を読んでから支払い・チャージを終えるまでの一連の操作も通りました（iOS・Android とも）。
+
+注入ライブラリを変えたときは、`./scripts/test-inject.sh` で確認できます（「[テスト](#テスト)」を参照）。
+
 ## 留意事項
 
 ### 影響する範囲
@@ -308,7 +351,10 @@ $SIMCAMCTL android-setup Medium_Phone_API_36.0   # AVD の config.ini の hw.cam
 - 音声（マイク）には対応していません。
 - Web ページ（Safari・WKWebView）の `getUserMedia` は、映像だけ差し替えます。カメラの許可ダイアログは出ません。ズームなどの `applyConstraints` は受け付けますが、映像には反映されません。
 - AVFoundation の内部の仕組みに合わせて差し替えているため、iOS シミュレータのバージョンによっては動かない可能性があります。
-- ライブラリの中に `#if targetEnvironment(simulator)` でカメラを無効にするコードがあると、映像はアプリまで届きません。元のリポジトリの `patches/` にある、古い expo-camera / react-native-vision-camera 向けのパッチが必要になる場合があります（未確認）。
+  - 偽のカメラが実装していない AVFoundation のメソッドは、0・NO・nil などを返すようにしています。新しい iOS で AVFoundation が偽のカメラに新しい問い合わせをしても、落ちにくくするためです。
+- ライブラリの中に `#if targetEnvironment(simulator)` でカメラを無効にするコードがあると、映像はアプリまで届かないことがあります。
+  - セッションの開始だけを省くもの（expo-camera 17 の `startSession()` など）には対応しています。カメラを組み込んだのにアプリが 0.5 秒たっても `startRunning` も `stopRunning` も呼ばないセッションは、注入ライブラリが代わりに開始します。
+  - それ以外は、元のリポジトリの `patches/` にある、古い expo-camera / react-native-vision-camera 向けのパッチが必要になる場合があります（未確認）。
 
 ### 起動しっぱなしにする場合（CPU・電池）
 - **起動したままにしても問題はありません。** 画面の「Frames pushed」などのカウンタは増え続けますが、64 ビット整数なので上限に達することはなく（30fps で約 97 億年）、メモリも増え続けません。
@@ -361,6 +407,16 @@ xcodebuild -project SimulatorCamera.xcodeproj -scheme SimulatorCamera \
 - 通信の約束事
 - EAN-13 のチェックデジット
 - 描いたバーコードが Vision で読み取れるか（縦・横の両方）
+
+注入ライブラリ（`SimCamInject/`）は、起動中の iOS シミュレータで確かめます。SimulatorCameraEx.app を起動しておいてください（映像の送り元になります）。
+
+```bash
+./scripts/test-inject.sh            # 起動中のシミュレータで
+./scripts/test-inject.sh <UDID>     # シミュレータを指定する
+```
+
+- `SimCamInject/tests/` の確認用プログラムをシミュレータで動かし、落ちないこと・映像が届くこと・QR が読めることを確かめます。
+- 通常の組み方（expo-camera など）、`startRunning` を呼ばない場合（expo-camera 17）、接続を手で張る組み方（react-native-vision-camera 5）、`AVCaptureMultiCamSession` の4通りです。
 
 ### カメラ拡張を変更したとき
 - `project.yml` の `CURRENT_PROJECT_VERSION` を1つ上げてください。

@@ -31,7 +31,7 @@ trap 'rm -rf "$GEN"' EXIT
 xcrun --sdk iphonesimulator clang "${COMMON[@]}" -fno-objc-arc -I "$GEN" \
     -install_name @rpath/SimCamInject.dylib \
     -framework Foundation -framework AVFoundation -framework CoreMedia -framework CoreVideo \
-    -framework QuartzCore -framework VideoToolbox -framework CoreGraphics -framework ImageIO \
+    -framework QuartzCore -framework VideoToolbox -framework CoreGraphics -framework ImageIO -framework CoreMotion \
     "$HERE/SimCamInject.m" "$HERE/SimCamFrameSource.m" "$HERE/SimCamWeb.m" -o "$OUT/SimCamInject.dylib"
 
 # SIGN_IDENTITY: the container app's identity when bundled (Xcode passes
