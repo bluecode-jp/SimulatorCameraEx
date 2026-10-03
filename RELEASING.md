@@ -110,6 +110,7 @@ git push origin main vX.Y.Z
 - **Organizer に配布方法が出ない／`exportOptionsPlist error for key "method"`**：アーカイブが macOS App Archive になっていません（手順2を参照）。
 - **`No certificate for team 'C5TUJ8526Z' matching 'Developer ID Application'`**：`xcodebuild -exportArchive` をコマンドラインで実行すると、クラウド証明書が使えずにこのエラーになります。Organizer から配布してください。
 - **公証が失敗した**：`notarization-log.json` の `issues` に原因が書かれています。
+- **`package-dmg.sh` が「DMG の作成に失敗しました。15 秒後にやり直します」と繰り返す**：macOS 27 では、ディスクイメージの作成がときどき失敗します（`hdiutil` は「リソースが使用中です」、`diskutil image` は error code 156）。スクリプトは 10 回までやり直します。それでも失敗するときは、Mac を再起動してから実行してください。
 - **配布先で映像が届かない**：`simcamctl status` の `sink open` を確認します。`no` のままなら、アプリを一度終了して起動し直してください。
 
 ## 手元に Developer ID 証明書がある場合

@@ -174,11 +174,19 @@ ZIP_OUT="$DIST_DIR/SimulatorCameraEx-$VERSION.zip"
 
 echo "▶︎ Packaging .dmg"
 DMG_OUT="$DIST_DIR/SimulatorCameraEx-$VERSION.dmg"
-hdiutil create \
-    -volname "SimulatorCameraEx $VERSION" \
-    -srcfolder "$APP_BUNDLE" \
-    -ov -format UDZO \
-    "$DMG_OUT"
+rm -f "$DMG_OUT"
+# hdiutil create is deprecated and can fail with "Resource busy" on macOS 27;
+# prefer `diskutil image create from` where it exists.
+if diskutil image create from --help >/dev/null 2>&1; then
+    diskutil image create from "$APP_BUNDLE" "$DMG_OUT" --format UDZO \
+        --volumeName "SimulatorCameraEx $VERSION"
+else
+    hdiutil create \
+        -volname "SimulatorCameraEx $VERSION" \
+        -srcfolder "$APP_BUNDLE" \
+        -ov -format UDZO \
+        "$DMG_OUT"
+fi
 
 # Sign the DMG itself (required for notarization to confer Gatekeeper acceptance
 # on the DMG — not just on the .app inside).

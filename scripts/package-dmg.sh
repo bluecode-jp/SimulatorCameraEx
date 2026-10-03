@@ -70,8 +70,25 @@ ZIP_OUT="$DIST_DIR/SimulatorCameraEx-$VERSION.zip"
 rm -f "$DMG_OUT" "$ZIP_OUT"
 
 echo "▶︎ DMG"
-hdiutil create -volname "SimulatorCameraEx $VERSION" -srcfolder "$STAGE" \
-    -ov -format UDZO "$DMG_OUT" >/dev/null 2>&1
+# `hdiutil create` は非推奨。使える Mac では `diskutil image create from` で作る（macOS 26 以前は hdiutil）。
+# どちらも、macOS 27 ではときどき失敗する（hdiutil は「リソースが使用中です」、diskutil は
+# error code 156）。やり直すと通るので、15 秒おきに 10 回まで試す。
+make_dmg() {
+    rm -f "$DMG_OUT"
+    if diskutil image create from --help >/dev/null 2>&1; then
+        diskutil image create from "$STAGE" "$DMG_OUT" --format UDZO \
+            --volumeName "SimulatorCameraEx $VERSION" >/dev/null 2>&1
+    else
+        hdiutil create -volname "SimulatorCameraEx $VERSION" -srcfolder "$STAGE" \
+            -ov -format UDZO "$DMG_OUT" >/dev/null 2>&1
+    fi
+}
+for attempt in $(seq 1 10); do
+    make_dmg && break
+    [[ $attempt -lt 10 ]] || { echo "ERROR: DMG を作れませんでした（10 回失敗）" >&2; exit 1; }
+    echo "  DMG の作成に失敗しました。15 秒後にやり直します（$attempt/10）"
+    sleep 15
+done
 echo "▶︎ ZIP"
 ditto -c -k --sequesterRsrc --keepParent "$STAGE/SimulatorCameraEx.app" "$ZIP_OUT"
 
